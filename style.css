@@ -1,0 +1,708 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    background-color: #FFE9F4;
+    color: #ffffff;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    touch-action: none; /* Verhindert Scrollen/Zoomen auf dem Handy */
+}
+
+/* Weiche, helle Vignette (Knuddel-Look statt blutrot) */
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0) 62%, rgba(155, 108, 180, 0.16) 100%);
+    box-shadow: inset 0 0 120px rgba(255, 159, 201, 0.25);
+    z-index: 99;
+    pointer-events: none;
+}
+
+/* CLASSIC-Modus: ebenfalls weiche Vignette */
+body.classic-mode::before {
+    background: radial-gradient(circle at center, rgba(255,255,255,0) 62%, rgba(155,108,180,0.16) 100%);
+    box-shadow: inset 0 0 120px rgba(255, 159, 201, 0.25);
+}
+
+/* Ganz dezente Scanlines (modern-weich) */
+body::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: none;   /* keine Scanlines mehr (moderner App-Look) */
+    z-index: 100;
+    pointer-events: none;
+}
+
+/* ========================================================================= */
+/* QUERFORMAT-ERZWINGUNG (HARDWARE ROTATION FIX)                             */
+/* ========================================================================= */
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+}
+
+/* WICHTIG: Wenn das Smartphone hochkant gehalten wird, drehen wir den Container.
+   Alle Kind-Elemente (Canvas, UI, Buttons) passen sich JETZT automatisch an! */
+/* Querformat erzwingen (Menü UND Spiel) — auf dem Handy bitte quer halten */
+@media (orientation: portrait) and (max-width: 950px) {
+    #game-container {
+        width: 100vh;
+        height: 100vw;
+        transform: rotate(90deg);
+        transform-origin: top left;
+        position: absolute;
+        top: 0;
+        left: 100vw;
+    }
+}
+
+/* Alle Layer innerhalb des Containers füllen diesen zu 100% aus */
+#gameCanvas, canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    image-rendering: pixelated;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* ========================================================================= */
+/* HUD LAYOUT & INVENTAR                                                     */
+/* ========================================================================= */
+#hud {
+    position: absolute;
+    top: 25px;
+    left: 25px;
+    right: 25px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 12;
+    pointer-events: none;
+}
+.hud-top-left { display: flex; flex-direction: column; gap: 15px; }
+.hud-top-right { display: flex; flex-direction: column; gap: 12px; text-align: right; }
+
+#hud > div, #hud .hud-top-left > div, #hud .hud-top-right > div {
+    background-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Modern 16-Bit Health Bar */
+#hp-display {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.hearts { display: flex; gap: 3px; }
+.hearts .heart { font-size: 1.5rem; line-height: 1; filter: drop-shadow(1px 1px 0 rgba(155,108,180,0.5)); }
+.hp-label {
+    color: #FF6FA8;
+    font-size: 1.2rem;
+    text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0 0 15px rgba(255, 159, 201, 0.9);
+}
+#health-bar-container {
+    width: 220px;
+    height: 24px;
+    background-color: #6a3a55;
+    border: 4px solid #fff;
+    box-shadow: 3px 3px 0px #C97FA8, 0 0 20px rgba(255, 159, 201, 0.6);
+    position: relative;
+}
+#health-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #E86FB0 0%, #FF9FC9 50%, #FFC2E2 100%);
+    box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.6), inset 0 4px 0 rgba(255, 150, 150, 0.4);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#score-display, #coin-display, #level-display, #weapon-display {
+    color: #ffffff;
+    font-size: 1.2rem;
+    text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 3px 3px 0px #000;
+}
+#level-display { color: #9B6CD0; }
+#weapon-display { color: #FF6FA8; }
+
+#hud-inventory {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 12;
+    pointer-events: none;
+}
+
+/* ========================================================================= */
+/* STARTSCREEN / GAMEOVER (ZENTRIERUNGS-FIX VIA FLEXBOX)                     */
+/* ========================================================================= */
+#menu-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Pastell-Wiesen-Hintergrund (CSS, kein JPG mehr): Himmel oben, Wiese unten */
+    background: linear-gradient(180deg, #BFE9FF 0%, #D9ECFF 38%, #FFE9F4 56%, #A6E085 56%, #7FC85A 100%);
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    z-index: 25;
+    pointer-events: auto;
+}
+
+/* Panel füllt den ganzen Screen; Inhalt wird absolut platziert -> Mitte bleibt frei */
+.menu-panel {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    text-align: center;
+}
+#start-screen-prompt { position: absolute; inset: 0; }
+
+/* Zwei Blöcke: ganz links & ganz rechts am Rand, vertikal zentriert, Mitte frei */
+.menu-cols {
+    position: absolute;
+    top: auto;
+    bottom: 92px;                 /* Boxen an die untere Kante (über der Titelleiste) */
+    left: 0;
+    right: 0;
+    transform: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;        /* unten bündig */
+    padding: 0 14px;
+}
+.menu-col {
+    flex: 0 0 auto;
+    /* vmax/vmin statt vw/vh: passt auch im um 90° gedrehten Container (Handy) */
+    width: min(34vmax, 360px);
+    background: rgba(255, 255, 255, 0.72);
+    border: 3px solid #FF9FC9;
+    border-radius: 14px;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 0 22px rgba(255, 159, 201, 0.5), inset 0 0 30px rgba(255, 255, 255, 0.4);
+    padding: 12px 14px;
+    max-height: 86vmin;
+    overflow: visible;            /* kein Scrollbalken mehr (Charakter-Wahl ist im Hero-Screen) */
+}
+.menu-col::-webkit-scrollbar { width: 8px; }
+.menu-col::-webkit-scrollbar-thumb { background: #900; border: 2px solid #000; }
+.menu-col .menu-section:last-child { margin-bottom: 0; }
+
+/* Untere Titelleiste (an der unteren Kante ausgerichtet) */
+#title-bar {
+    position: absolute;
+    bottom: 16px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    pointer-events: none;
+    z-index: 2;
+}
+#title-bar h1 { margin: 0 0 2px 0; }
+#title-bar .insert-coin-text { margin: 0 !important; }
+
+/* Game-Over: eigenes, zentriertes Panel */
+#game-over-stats {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.85);
+    border: 3px solid #FF9FC9;
+    border-radius: 16px;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 0 24px rgba(255, 159, 201, 0.55), inset 0 0 36px rgba(255, 255, 255, 0.5);
+    padding: 22px 26px;
+    width: 90%;
+    max-width: 460px;
+}
+
+
+#menu-overlay h1 {
+    font-size: clamp(1.7rem, 6vw, 2.8rem);
+    margin-bottom: 6px;
+    color: #FF6FA8;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    line-height: 1.1;
+    text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 3px 3px 0 #fff, 0 0 26px rgba(255, 159, 201, 0.9);
+}
+
+#menu-overlay p {
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+    color: #9B6CD0;
+    line-height: 1.5;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff;
+}
+
+.insert-coin-text {
+    color: #E86FB0 !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 16px !important;
+    animation: blink 1.2s infinite;
+    text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, 0 0 15px rgba(255, 159, 201, 0.7) !important;
+}
+
+/* --- Menü-Sektionen mit Labels --- */
+.menu-section { width: 100%; margin-bottom: 12px; }
+.menu-label {
+    display: block;
+    font-size: 0.58rem;
+    color: #9B6CD0;
+    letter-spacing: 3px;
+    margin-bottom: 7px;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 #fff;
+}
+.btn-row { display: flex; gap: 8px; justify-content: center; align-items: stretch; width: 100%; }
+.btn-row.wrap, #level-buttons { flex-wrap: wrap; }
+
+/* Auswahl-Buttons (Modus/Sound/Charakter) */
+.opt-btn {
+    flex: 1 1 0;
+    min-width: 84px;
+    padding: 11px 8px;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    color: #d4f5d4;
+    background: rgba(0, 36, 0, 0.5);
+    border: 2px solid #2faa2f;
+    border-radius: 3px;
+    box-shadow: 3px 3px 0 #000;
+    cursor: pointer;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 #000;
+    transition: transform .08s, background .1s;
+}
+.opt-btn:hover { background: rgba(0, 95, 0, 0.7); transform: translateY(-2px); }
+.opt-btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
+
+/* Level-Wahl-Buttons (kompakt, umbrechend) */
+#level-buttons { gap: 6px; }
+.lvl-btn { flex: 0 0 auto; min-width: 52px; padding: 8px 6px; font-size: 0.55rem; }
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.wasted-text {
+    font-size: 3.5rem;
+    color: #FF6FA8;
+    margin-bottom: 15px;
+    letter-spacing: 4px;
+    text-shadow: -4px -4px 0 #fff, 4px -4px 0 #fff, 0 0 30px #FF9FC9;
+}
+
+/* Schwierigkeitsgrad-Box: nebeneinander, sind zugleich die START-Buttons */
+.difficulty-box {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 7px;
+    margin: 2px 0;
+    width: 100%;
+}
+
+.diff-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    padding: 13px 4px !important;
+    font-size: 0.58rem !important;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    transition: transform 0.1s;
+    background: #FFF0F6;
+    border: 2px solid #FF9FC9;
+    color: #9B6CD0;
+    cursor: pointer;
+    border-radius: 10px;
+    box-shadow: 3px 3px 0px #C97FA8;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 #fff;
+}
+
+.diff-btn:hover {
+    background: #FF9FC9;
+    color: #fff;
+    box-shadow: 0 0 15px #FF9FC9;
+    transform: scale(1.05);
+}
+
+.princess { border-color: #ff69b4 !important; color: #E8559E !important; }
+.regular  { border-color: #5FC0A0 !important; color: #3FA080 !important; }
+.badass   { border-color: #C9A0FF !important; color: #9B6CD0 !important; font-weight: bold; }
+.princess:hover { background: #ff69b4 !important; color: #fff !important; }
+.regular:hover  { background: #9FE8D0 !important; color: #2E6B55 !important; }
+.badass:hover   { background: #C9A0FF !important; color: #fff !important; }
+
+/* Globale Button-Stile für Overlays */
+button {
+    pointer-events: auto;
+    padding: 15px 30px;
+    font-size: 1rem;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    color: #ffffff;
+    background-color: #C9A0FF;
+    border: 4px solid #fff;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 4px 4px 0 #C97FA8, 0 0 15px rgba(255, 159, 201, 0.5);
+    text-shadow: 1px 1px 0 #9B6CD0;
+    transition: all 0.1s ease;
+}
+button:hover {
+    background-color: #FF9FC9;
+    box-shadow: 4px 4px 0 #C97FA8, 0 0 25px rgba(255, 159, 201, 0.9);
+    transform: scale(1.03);
+}
+button:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0 0 0 #000000;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@keyframes shake {
+    0% { transform: translate(1px, 1px); }
+    50% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, -1px); }
+}
+
+/* ===== Großer, eindeutiger START-Knopf ===== */
+.start-btn {
+    width: 100%;
+    padding: 16px 8px !important;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    font-size: 0.95rem !important;
+    color: #fff;
+    background: linear-gradient(#FF9FC9, #E86FB0);
+    border: 3px solid #FFD6EC !important;
+    border-radius: 16px;
+    cursor: pointer;
+    text-shadow: 2px 2px 0 #C24A8A;
+    box-shadow: 0 0 18px rgba(255,159,201,0.6), 4px 4px 0 #C97FA8;
+    animation: startpulse 1.1s ease-in-out infinite;
+}
+.start-btn:hover { background: linear-gradient(#FFB3DC, #FF6FA8); transform: scale(1.04); }
+.start-hint { display:block; margin-top:7px; font-size:0.5rem; color:#9B6CD0; letter-spacing:1px; text-transform:uppercase; }
+@keyframes startpulse { 0%,100% { box-shadow: 0 0 14px rgba(255,159,201,0.5), 4px 4px 0 #C97FA8; } 50% { box-shadow: 0 0 28px rgba(255,159,201,0.95), 4px 4px 0 #C97FA8; } }
+
+/* ===== CHOOSE YOUR HERO ===== */
+#hero-select {
+    position: absolute; inset: 0; z-index: 50;
+    background: rgba(6, 1, 1, 0.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.2vmin; padding: 2vmin;
+}
+.hero-title {
+    font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 1.6rem;
+    text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9; letter-spacing: 3px; margin: 0 0 1vmin;
+}
+.hero-row { display: flex; gap: 1.4vmax; justify-content: center; align-items: stretch; flex-wrap: nowrap; }
+.hero-card {
+    width: min(20vmax, 230px);
+    background: rgba(255, 255, 255, 0.78);
+    border: 3px solid #FF9FC9; border-radius: 14px;
+    padding: 1.2vmin 1vmin; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    box-shadow: inset 0 0 24px rgba(255,214,236,0.5); transition: transform 0.12s, box-shadow 0.12s;
+}
+.hero-card:hover { transform: translateY(-6px) scale(1.04); border-color: #E86FB0; box-shadow: 0 0 22px rgba(255,111,168,0.7); }
+.hero-canvas { position: static !important; flex: 0 0 auto; width: 130px !important; height: 180px !important; image-rendering: pixelated; z-index: auto; }
+.hero-card h3 { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 0.95rem; margin: 6px 0; text-shadow: 2px 2px 0 #fff; }
+.hero-desc { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.5rem; line-height: 1.6; text-align: center; margin: 0; }
+.hero-desc b { color: #E86FB0; }
+.hero-controls { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.55rem; text-align: center; margin-top: 1.4vmin; letter-spacing: 1px; }
+.hero-controls b { color: #E86FB0; }
+.hero-pick { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #E86FB0; font-size: 0.6rem; animation: blink 1s step-start infinite; margin: 0.4vmin 0; }
+#hero-back { flex: 0 0 auto !important; width: auto !important; align-self: center; padding: 12px 26px !important; font-size: 0.7rem !important; min-width: 0 !important; }
+.hero-canvas { display: block; }
+
+/* ===== Startscreen: nur Titel + START ganz unten ===== */
+.start-main { position: absolute; bottom: 7%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.start-title { margin: 0; }
+.start-main .start-btn { width: auto; padding: 18px 54px !important; font-size: 1.4rem !important; }
+
+/* ===== Menü-Assistent (Wizard-Schritte) ===== */
+.wizard { position: absolute; inset: 0; z-index: 50; background: linear-gradient(180deg, #BFE9FF 0%, #FFE9F4 55%, #A6E085 55%, #7FC85A 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4vmin; padding: 2vmin; }
+.wiz-title { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 1.5rem; text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9; letter-spacing: 3px; margin: 0 0 1vmin; }
+.wiz-row { display: flex; gap: 2vmax; justify-content: center; align-items: stretch; flex-wrap: wrap; }
+.wiz-card { width: min(28vmax, 320px); background: rgba(255, 255, 255, 0.82); border: 3px solid #FF9FC9; border-radius: 16px;
+    padding: 1.4vmin 1.2vmin; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    box-shadow: inset 0 0 24px rgba(255,214,236,0.5); transition: transform 0.12s, box-shadow 0.12s; }
+.wiz-card:hover { transform: translateY(-6px) scale(1.04); border-color: #E86FB0; box-shadow: 0 0 24px rgba(255,111,168,0.7); }
+.wiz-card h3 { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 1.1rem; margin: 12px 0 6px; text-shadow: 2px 2px 0 #fff; }
+.wiz-desc { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.55rem; line-height: 1.7; text-align: center; margin: 0; }
+.wiz-desc b { color: #E86FB0; }
+.mode-preview { position: static !important; width: 260px !important; height: 150px !important; flex: 0 0 auto; border: 2px solid #FF9FC9; border-radius: 8px; image-rendering: pixelated; z-index: auto; }
+.wiz-icon { font-size: 2.6rem; }
+.wiz-hint { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 0.55rem; text-align: center; margin: 0.4vmin 0 1vmin; }
+.wiz-back { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; align-self: center; margin-top: 1vmin; padding: 12px 26px !important; font-size: 0.7rem !important; }
+/* Level-/Schwierigkeit-Schritt: aufgeräumtes Panel */
+.wiz-panel {
+    background: rgba(255, 255, 255, 0.82);
+    border: 3px solid #FF9FC9;
+    border-radius: 16px;
+    padding: 2.4vmin 3vmin;
+    display: flex; flex-direction: column; align-items: center; gap: 1.8vmin;
+    min-width: min(560px, 88vw); max-width: 92vw;
+    box-shadow: 0 0 28px rgba(255, 159, 201, 0.4), inset 0 0 44px rgba(255, 255, 255, 0.5);
+}
+.wiz-group { display: flex; flex-direction: column; align-items: center; gap: 1vmin; width: 100%; }
+.wiz-group .menu-label { font-size: 0.62rem; }
+.wiz-sep { width: 80%; height: 2px; background: linear-gradient(90deg, transparent, #FF9FC9, transparent); opacity: 0.7; }
+#step-level #level-buttons { max-width: 70vmax; justify-content: center; gap: 9px; }
+#step-level .lvl-btn { min-width: 60px; padding: 13px 10px; font-size: 0.72rem; }
+#step-level .wiz-hint { margin: 0.3vmin 0 0; color: #ffd54a; font-size: 0.5rem; opacity: 0.9; }
+#step-level .difficulty-box { max-width: 560px; margin: 0 auto; gap: 12px; }
+#step-level .diff-btn { padding: 14px 6px !important; font-size: 0.62rem !important; }
+#step-level #btn-go { width: auto; padding: 18px 56px !important; font-size: 1.2rem !important; margin-top: 1.6vmin; }
+#step-level .wiz-back { margin-top: 0.8vmin; }
+
+/* ========================================================================= */
+/* TOUCH-STEUERUNG (BOMBENFEST POSITIONIERT)                                 */
+/* ========================================================================= */
+#mobile-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;                 /* nur im Spiel auf Touch-Geräten sichtbar */
+}
+body.in-game.touch #mobile-controls { display: block; }
+
+#mobile-controls button {
+    padding: 0;
+    text-shadow: none;
+    background: none;
+    box-shadow: none;
+    pointer-events: auto;
+}
+
+/* D-PAD */
+#dpad {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 140px;
+    height: 140px;
+    opacity: 0.8;
+}
+.dpad-center {
+    position: absolute;
+    top: 33.33%; left: 33.33%; width: 33.33%; height: 33.33%;
+    background-color: #555;
+    z-index: 1;
+}
+.dpad-btn {
+    position: absolute;
+    background-color: #666 !important;
+    border: 4px solid #111 !important;
+    box-shadow: inset 2px 2px 0px rgba(255,255,255,0.2) !important;
+    border-radius: 8px;
+    z-index: 2;
+    display: block !important;
+    visibility: visible !important;
+}
+.dpad-btn.up { top: 0; left: 33.33%; width: 33.33%; height: 38%; border-radius: 12px 12px 0 0; }
+.dpad-btn.down { bottom: 0; left: 33.33%; width: 33.33%; height: 38%; border-radius: 0 0 12px 12px; }
+.dpad-btn.left { top: 33.33%; left: 0; width: 38%; height: 33.33%; border-radius: 12px 0 0 12px; }
+.dpad-btn.right { top: 33.33%; right: 0; width: 38%; height: 33.33%; border-radius: 0 12px 12px 0; }
+
+/* ACTION PAD */
+#action-pad {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 150px;
+    height: 150px;
+    opacity: 0.8;
+}
+.action-btn {
+    position: absolute;
+    width: 110px;
+    height: 110px;
+    border-radius: 50% !important;
+    border: 5px solid #111 !important;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    font-size: 1.8rem;
+    color: #fff !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 6px 0 #000 !important;
+}
+.action-btn.y-btn { top: 50%; left: 0; transform: translateY(-50%); background-color: #00A651 !important; } 
+.action-btn.x-btn { top: 0; left: 50%; transform: translateX(-50%); background-color: #00529B !important; } 
+.action-btn.b-btn { bottom: 0; left: 50%; transform: translateX(-50%); background-color: #FFDE00 !important; color: #000 !important; text-shadow: none !important; } 
+.action-btn.a-btn { top: 50%; right: 0; transform: translateY(-50%); background-color: #ED1C24 !important; } 
+
+/* ZOOM CONTROLS — nur im Spiel sichtbar */
+#zoom-controls {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 15px;
+    pointer-events: auto;
+    z-index: 50;
+}
+body.in-game #zoom-controls { display: flex; }
+
+#zoom-controls button {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    border: 3px solid #555 !important;
+    color: #fff !important;
+    width:35px;
+    height: 35px;
+
+    font-size: 1.8rem;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    border-radius: 8px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 3px 3px 0 #000 !important;
+    text-shadow: 2px 2px 0 #000 !important;
+    pointer-events: auto;
+    position: relative;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Custom Pixel-Art Icons via CSS */
+#btn-zoom-out::after {
+    content: "";
+    display: block;
+    width: 20px;
+    height: 6px;
+    background-color: #fff;
+    box-shadow: 2px 2px 0 #000;
+}
+
+#btn-zoom-in::after {
+    content: "";
+    display: block;
+    width: 20px;
+    height: 6px;
+    background-color: #fff;
+    box-shadow: 2px 2px 0 #000;
+    position: relative;
+}
+#btn-zoom-in::before {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 20px;
+    background-color: #fff;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 2px 2px 0 #000;
+}
+
+#btn-pause::after {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 20px;
+    background-color: #fff;
+    box-shadow: 2px 2px 0 #000, 12px 0 0 #fff, 14px 2px 0 #000;
+    margin-right: 12px; /* Ausgleich für den rechten Balken */
+}
+
+/* ========================================================================= */
+/* HANDY-SKALIERUNGEN (ANPASSUNG AN LEISTEN FÜR CHROME, SAFARI, EDGE, FIREFOX)*/
+/* ========================================================================= */
+@media (max-width: 950px) {
+    #hud {
+        top: 6px !important;
+        left: 8px !important;
+        right: 8px !important;
+    }
+    .hud-top-left  { transform: scale(0.72); transform-origin: top left; }
+    .hud-top-right { transform: scale(0.72); transform-origin: top right; }
+
+    /* WPN-Zeile ist redundant zur Inventar-Leiste -> auf dem Handy ausblenden */
+    #weapon-display { display: none; }
+
+    /* Inventar kompakter, knapp über dem unteren Rand zwischen den Pads */
+    #hud-inventory {
+        bottom: 8px;
+        transform: translateX(-50%) scale(0.7);
+        transform-origin: bottom center;
+    }
+
+    /* Zoom/Pause klein oben mittig (zwischen HP links und Score rechts) */
+    #zoom-controls {
+        top: 6px !important;
+        transform: translateX(-50%) scale(0.8) !important;
+        gap: 10px !important;
+    }
+
+    /* Touch-Pads: groß & gut erreichbar, dezent transparent */
+    #dpad { width: 170px !important; height: 170px !important; bottom: 14px !important; left: 14px !important; opacity: 0.7; }
+    #action-pad { width: 170px !important; height: 170px !important; bottom: 14px !important; right: 14px !important; opacity: 0.8; }
+    .action-btn { width: 66px !important; height: 66px !important; font-size: 2rem !important; }
+    .dpad-btn { border-width: 6px !important; }
+}
+

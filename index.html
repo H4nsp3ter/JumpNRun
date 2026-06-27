@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BLÜMCHEN-LAND 🌸</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+                <div id="zoom-controls">
+                    <button id="btn-zoom-out"></button>
+                    <button id="btn-zoom-in"></button>
+                    <button id="btn-pause"></button>
+                </div>
+        
+        <div id="hud">
+            <!-- Top Left: Health & Level -->
+            <div class="hud-top-left">
+                <div id="hp-display">
+                    <div id="hud-hearts" class="hearts"></div>
+                </div>
+                <div id="level-display">LEVEL: <span id="level-value">1</span></div>
+            </div>
+
+            <!-- Top Right: Score, Coins, Current Weapon -->
+            <div class="hud-top-right">
+                <div id="score-display">SCORE: <span id="score-value">000000</span></div>
+                <div id="coin-display">COINS: <span id="coin-value">0</span></div>
+                <div id="weapon-display">WPN: <span id="weapon-value">BAT [∞]</span></div>
+            </div>
+        </div>
+
+        <!-- Bottom Center: Visual Inventory -->
+        <div id="hud-inventory" class="hud-bottom-center">
+            <!-- Wird von JS gefüllt -->
+        </div>
+
+        <div id="mobile-controls" class="hidden">
+            <div id="dpad">
+                <button class="dpad-btn up" id="btn-up"></button>
+                <button class="dpad-btn right" id="btn-right"></button>
+                <button class="dpad-btn down" id="btn-down"></button>
+                <button class="dpad-btn left" id="btn-left"></button>
+                <div class="dpad-center"></div>
+            </div>
+            
+            <div id="action-pad">
+                <button class="action-btn x-btn" id="btn-x">X</button>
+                <button class="action-btn y-btn" id="btn-y">Y</button>
+                <button class="action-btn a-btn" id="btn-a">A</button>
+                <button class="action-btn b-btn" id="btn-b">B</button>
+            </div>
+        </div>
+        
+        <!-- STARTSCREEN: nur Titel + START -->
+        <div id="menu-overlay">
+            <div class="menu-panel">
+                <div id="start-screen-prompt">
+                    <div class="start-main">
+                        <h1 class="gore-title start-title">BLÜMCHEN-LAND</h1>
+                        <button id="btn-start" class="start-btn">&#9654; START</button>
+                    </div>
+                </div>
+
+                <div id="game-over-stats" class="hidden">
+                    <h2 class="wasted-text">OHJE!</h2>
+                    <p>FINAL SCORE: <span id="final-score" style="color:#FFD700">0</span></p>
+                    <p>LEVEL REACHED: <span id="final-level" style="color:#0FF">1</span></p>
+                    <p style="margin-top:30px; color:#888;">TRY AGAIN?</p>
+                    <div class="difficulty-box">
+                        <button id="restart-princess" class="diff-btn princess">PRINZESSIN</button>
+                        <button id="restart-regular" class="diff-btn regular">NORMAL</button>
+                        <button id="restart-badass" class="diff-btn badass">WILDFANG</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WIZARD 1: MODUS -->
+        <div id="step-mode" class="wizard hidden">
+            <h2 class="wiz-title">W&Auml;HLE DEINEN MODUS</h2>
+            <div class="wiz-row">
+                <div class="wiz-card mode-card" data-mode="NORMAL">
+                    <canvas class="mode-preview" width="260" height="150"></canvas>
+                    <h3>MODE A</h3>
+                    <p class="wiz-desc">Prozedural aufgebautes Level (Bauplan aus Modulen) &ndash; siehe buildModule() in level.js.</p>
+                </div>
+                <div class="wiz-card mode-card" data-mode="CLASSIC">
+                    <canvas class="mode-preview" width="260" height="150"></canvas>
+                    <h3>MODE B</h3>
+                    <p class="wiz-desc">Handgesetztes Level an festen Koordinaten &ndash; siehe buildClassic() in classic.js.</p>
+                </div>
+            </div>
+            <button class="wiz-back" data-back="start">&#8592; ZUR&Uuml;CK</button>
+        </div>
+
+        <!-- WIZARD 2: MUSIK -->
+        <div id="step-music" class="wizard hidden">
+            <h2 class="wiz-title">W&Auml;HLE DIE MUSIK</h2>
+            <div class="wiz-row">
+                <div class="wiz-card music-card" data-audio="METAL"><div class="wiz-icon">&#127911;</div><h3>METAL</h3><p class="wiz-desc">Brachiale Heavy-Metal-Tracks. Brutal und laut.</p></div>
+                <div class="wiz-card music-card" data-audio="CLASSIC"><div class="wiz-icon">&#9834;</div><h3>8-BIT</h3><p class="wiz-desc">Klassische Chiptune-Melodien. Waffen-Sounds bleiben gleich.</p></div>
+            </div>
+            <button class="wiz-back" data-back="mode">&#8592; ZUR&Uuml;CK</button>
+        </div>
+
+        <!-- WIZARD 3: HELD -->
+        <div id="hero-select" class="wizard hidden">
+            <h2 class="hero-title">W&Auml;HLE DEINE HELDIN</h2>
+            <div class="hero-row">
+                <div class="hero-card" data-char="LINA">
+                    <canvas class="hero-canvas" width="130" height="180"></canvas>
+                    <h3>LINA</h3>
+                    <p class="hero-desc">Die Blumenfee &ndash; <b>Flatter-Doppelsprung</b> &amp; <b>Knutsch-Knuddel-Attacke</b> (E), die Gegner zu Bl&uuml;mchen knuddelt.</p>
+                </div>
+            </div>
+            <p class="hero-controls">STEUERUNG&nbsp; &#8592;&#8594; Laufen &middot; LEER/B Springen (2&times; = Flattern) &middot; F/A Spritzen &middot; Q/X Waffe &middot; <b>E Knutsch-Knuddel (Lina)</b></p>
+            <p class="hero-pick">&#9654; W&Auml;HLE DEINE HELDIN</p>
+            <button class="wiz-back" data-back="music">&#8592; ZUR&Uuml;CK</button>
+        </div>
+
+        <!-- WIZARD 4: LEVEL & SCHWIERIGKEIT -->
+        <div id="step-level" class="wizard hidden">
+            <h2 class="wiz-title">LEVEL &amp; SCHWIERIGKEIT</h2>
+            <div class="wiz-panel">
+                <div class="wiz-group" id="level-selection">
+                    <span class="menu-label">Level w&auml;hlen</span>
+                    <div id="level-buttons" class="btn-row wrap"></div>
+                    <p class="wiz-hint">&#9654; Bereits durchgespielte Level kannst du hier direkt anw&auml;hlen.</p>
+                </div>
+                <div class="wiz-sep"></div>
+                <div class="wiz-group">
+                    <span class="menu-label">Schwierigkeit</span>
+                    <div class="difficulty-box">
+                        <button id="btn-princess" class="diff-btn princess">PRINZESSIN</button>
+                        <button id="btn-regular" class="diff-btn regular">NORMAL</button>
+                        <button id="btn-badass" class="diff-btn badass">WILDFANG</button>
+                    </div>
+                </div>
+            </div>
+            <button id="btn-go" class="start-btn">&#9654; LOS GEHT'S</button>
+            <button class="wiz-back" data-back="hero">&#8592; ZUR&Uuml;CK</button>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="audio.js"></script>
+    <script src="input.js"></script>
+    <script src="particles.js"></script>
+    <script src="sprites.js"></script>
+    <script src="entities.js"></script>
+    <script src="enemies.js"></script>
+    <script src="player.js"></script>
+    <script src="level.js"></script>
+    <script src="classic.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
