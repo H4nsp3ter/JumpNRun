@@ -169,6 +169,35 @@ body::after {
     pointer-events: none;
 }
 
+/* Inventar-Slots: Waffen-Silhouette als Symbol, per Klick/Touch wählbar */
+.inv-slot {
+    pointer-events: auto;
+    position: relative;
+    width: 62px; height: 62px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 3px solid #C9A0FF;
+    border-radius: 16px;
+    box-shadow: 0 4px 0 rgba(155, 108, 180, 0.4);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+}
+.inv-slot:hover { transform: translateY(-2px); }
+.inv-slot:active { transform: translateY(1px); }
+.inv-current {
+    border-color: #FF6FA8;
+    background: rgba(255, 214, 236, 0.92);
+    box-shadow: 0 4px 0 #E3A9CC, 0 0 16px #FF9FC9;
+}
+.inv-icon { width: 44px; height: 44px; image-rendering: auto; pointer-events: none; }
+.inv-ammo {
+    position: absolute; bottom: -5px; right: -5px;
+    background: #9B6CD0; color: #fff;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif; font-size: 0.66rem; font-weight: 700;
+    line-height: 1; padding: 2px 6px; border-radius: 999px; border: 2px solid #fff;
+    min-width: 18px; text-align: center; pointer-events: none;
+}
+.inv-current .inv-ammo { background: #FF6FA8; }
+
 /* ========================================================================= */
 /* STARTSCREEN / GAMEOVER (ZENTRIERUNGS-FIX VIA FLEXBOX)                     */
 /* ========================================================================= */

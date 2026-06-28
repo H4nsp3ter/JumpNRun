@@ -272,6 +272,9 @@ class Game {
 
         document.body.addEventListener('click', (e) => {
             const t = e.target;
+            // ---- Inventar: Waffe per Klick/Touch wählen ----
+            const slot = t.closest && t.closest('.inv-slot');
+            if (slot && slot.dataset.weapon) { this.selectWeapon(slot.dataset.weapon); return; }
             // ---- PAUSE-Menü ----
             if (t.id === 'btn-resume' || (t.closest && t.closest('#btn-resume'))) { if (this.state === 'PAUSED') this.state = 'PLAYING'; return; }
             if (t.id === 'btn-quit' || (t.closest && t.closest('#btn-quit'))) { this.exitToMenu(); return; }
@@ -680,30 +683,112 @@ class Game {
         if (!this.ui.inventoryDiv || !this.player) return;
         const inv = Object.keys(this.player.inventory);
         let html = '';
-        
+
         inv.forEach((wType) => {
             const isCurrent = this.player.weapon === wType;
             const am = this.player.inventory[wType] === Infinity ? '∞' : this.player.inventory[wType];
-            
-            let bgCol = isCurrent ? 'rgba(255, 159, 201, 0.45)' : 'rgba(80, 50, 70, 0.7)';
-            let bCol = isCurrent ? '#FFF' : '#C9A0FF';
-            let shadow = isCurrent ? '0 0 15px #FF9FC9' : 'none';
-            let textColor = isCurrent ? '#FFF' : '#EEE';
-            const wShort = (CONFIG.WEAPON_NAMES[wType] && CONFIG.WEAPON_NAMES[wType].short) || wType.substring(0,3);
-            
-            html += `<div style="
-                width: 70px; height: 70px; 
-                background: ${bgCol}; border: 3px solid ${bCol}; 
-                display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
-                padding-bottom: 5px; border-radius: 5px; box-shadow: ${shadow};
-                transition: all 0.2s;
-            ">
-                <span style="font-size:11px; color:#FFE6FA; margin-bottom:10px; font-weight:bold; text-shadow: 1px 1px 0 #9B6CD0;">${wShort}</span>
-                <span style="font-size:16px; font-weight:bold; color:${textColor}; text-shadow: 2px 2px 0 #000;">${am}</span>
+            const col = isCurrent ? '#E8559E' : '#9B6CD0';
+            const wName = (CONFIG.WEAPON_NAMES[wType] && CONFIG.WEAPON_NAMES[wType].name) || wType;
+            const url = this._weaponIconURL(wType, col);
+            html += `<div class="inv-slot${isCurrent ? ' inv-current' : ''}" data-weapon="${wType}" title="${wName}">
+                <img class="inv-icon" src="${url}" alt="${wName}" draggable="false">
+                <span class="inv-ammo">${am}</span>
             </div>`;
         });
-        
+
         this.ui.inventoryDiv.innerHTML = html;
+    }
+
+    // Waffe direkt anwählen (Touch/Klick im Inventar) — wie der Q-Wechsel
+    selectWeapon(wType) {
+        if (!this.player || this.state !== 'PLAYING') return;
+        if (!(wType in this.player.inventory)) return;
+        if (this.player.weapon === wType) return;
+        this.player.weapon = wType;
+        if (this.audio && this.audio.playWeaponPickup) this.audio.playWeaponPickup();
+        this.updateHUD();
+    }
+
+    // Waffen-Silhouette als data-URL (gecacht je Waffe+Farbe)
+    _weaponIconURL(wType, col) {
+        if (!this._wIcon) this._wIcon = {};
+        const key = wType + '|' + col;
+        if (this._wIcon[key]) return this._wIcon[key];
+        const S = 48, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+        const ctx = cv.getContext('2d');
+        this._drawWeaponSil(ctx, wType, col);
+        const url = cv.toDataURL();
+        this._wIcon[key] = url;
+        return url;
+    }
+
+    // Einfache, gut erkennbare Waffen-Silhouette (Blickrichtung rechts), zentriert in 48×48
+    _drawWeaponSil(ctx, w, col) {
+        ctx.save();
+        ctx.translate(24, 24);
+        ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        const R = (x, y, wd, ht, r = 2) => { ctx.beginPath(); ctx.roundRect(x, y, wd, ht, r); ctx.fill(); };
+        switch (w) {
+            case 'PISTOL':
+                R(-15, -4, 26, 8, 2); R(-11, 3, 9, 13, 2);
+                ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(-1, 8, 5, 0.1, Math.PI - 0.1); ctx.stroke();
+                break;
+            case 'UZI':
+                R(-15, -5, 28, 8, 2); R(-8, 3, 8, 11, 2); R(3, 4, 5, 14, 2);
+                break;
+            case 'SHOTGUN':
+                R(-20, -4, 32, 7, 2);
+                ctx.beginPath(); ctx.moveTo(10, -2); ctx.lineTo(20, -5); ctx.lineTo(20, 11); ctx.lineTo(10, 8); ctx.fill();
+                break;
+            case 'ASSAULT_RIFLE':
+                R(-20, -4, 32, 7, 2); R(9, -3, 11, 9, 2);
+                ctx.beginPath(); ctx.moveTo(-3, 3); ctx.quadraticCurveTo(-6, 15, -13, 17); ctx.lineTo(-8, 17); ctx.quadraticCurveTo(-1, 13, 1, 3); ctx.fill();
+                break;
+            case 'MINIGUN':
+                for (const dy of [-6, -2, 2, 6]) R(-18, dy - 1.3, 28, 2.6, 1);
+                R(9, -9, 9, 18, 3); R(-21, -8, 6, 16, 2);
+                break;
+            case 'ROCKET':
+                R(-18, -5, 28, 10, 4);
+                ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(20, 0); ctx.lineTo(10, 5); ctx.fill();
+                R(-20, 3, 6, 10, 2);
+                break;
+            case 'FLAMETHROWER':
+                ctx.beginPath(); ctx.arc(-9, 3, 10, 0, 7); ctx.fill();
+                R(3, -3, 17, 6, 2);
+                ctx.beginPath(); ctx.moveTo(18, -4); ctx.lineTo(24, 0); ctx.lineTo(18, 4); ctx.fill();
+                break;
+            case 'GRENADE':
+                ctx.beginPath(); ctx.ellipse(0, 4, 10, 12, 0, 0, 7); ctx.fill();
+                R(-5, -11, 10, 5, 2);
+                ctx.beginPath(); ctx.moveTo(5, -10); ctx.lineTo(13, -7); ctx.lineTo(11, -3); ctx.lineTo(5, -6); ctx.fill();
+                break;
+            case 'MOLOTOV':
+                R(-6, -2, 12, 18, 4); R(-4, -11, 8, 9, 2);
+                ctx.beginPath(); ctx.moveTo(0, -13); ctx.quadraticCurveTo(6, -18, 0, -23); ctx.quadraticCurveTo(-6, -18, 0, -13); ctx.fill();
+                break;
+            case 'KNIFE':
+                ctx.beginPath(); ctx.moveTo(-13, 5); ctx.lineTo(9, -7); ctx.lineTo(14, -2); ctx.lineTo(-9, 9); ctx.fill();
+                R(-19, 4, 9, 6, 2);
+                break;
+            case 'AXE':
+                R(-3, -13, 5, 28, 2);
+                ctx.beginPath(); ctx.moveTo(2, -13); ctx.quadraticCurveTo(16, -11, 14, 0); ctx.quadraticCurveTo(16, 11, 2, 9); ctx.fill();
+                break;
+            case 'CHAINSAW':
+                R(-18, -6, 13, 13, 3); R(-7, -3, 24, 7, 4);
+                ctx.fillStyle = col; for (let bx = -4; bx < 16; bx += 5) { ctx.beginPath(); ctx.moveTo(bx, -3); ctx.lineTo(bx + 2, -6); ctx.lineTo(bx + 4, -3); ctx.fill(); }
+                break;
+            case 'BAT':
+            default: {
+                R(-2.5, -1, 5, 19, 2);
+                ctx.beginPath();
+                for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5; const rr = (i % 2 === 0) ? 10 : 4.4; const px = Math.cos(a) * rr, py = -10 + Math.sin(a) * rr; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+                ctx.closePath(); ctx.fill();
+                break;
+            }
+        }
+        ctx.restore();
     }
 
     loop(timestamp) {
