@@ -1,8 +1,7 @@
 // ============================================================================
-//  AudioManager — 100% prozedural (Web Audio), KEINE MP3s.
-//  Süße "Blümchen-Land"-Sounds: Wasserspritzer, Pops, Glitzer, Küsschen,
-//  Glucksen + fröhliche Chiptune-Melodien je Welt. Alle Methodennamen wie
-//  zuvor, damit Aufrufer in game/player/enemies unverändert funktionieren.
+//  AudioManager — prozedurale SFX (Web Audio) + fröhliche Song-Loops (MP3).
+//  audioTheme 'SONGS' = zufälliger Happy-Song je Level (Loop); 'CLASSIC' = die
+//  prozeduralen 8-Bit-Chiptunes. Alle SFX bleiben prozedural.
 // ============================================================================
 class AudioManager {
     constructor() {
@@ -11,10 +10,16 @@ class AudioManager {
         this.sustains = {};        // dauerhafte Loop-Sounds (Sprudel-/Kitzel-Waffen)
         this.lastSfx = {};         // Throttle-Zeitpunkte
         this.isMuted = false;
-        this.audioTheme = 'METAL'; // beibehalten (egal welcher Wert -> immer süßer Chiptune)
+        this.audioTheme = 'SONGS'; // 'SONGS' (MP3-Loops) | 'CLASSIC' (Chiptune)
         this.chipName = '';
         this.chipTimer = null;
-        // Kompat-Felder (werden nicht mehr befüllt, da keine MP3s)
+        // Hintergrund-Songs (MP3-Loops aus "sound files/")
+        this.songs = [];           // HTMLAudio-Elemente (Happy-Songs)
+        this._songsRequested = false;
+        this.currentBGM = null;    // laufendes Song-Element
+        this._songLevel = -1;      // letztes Level, für das ein Song gewählt wurde
+        this.songVolume = 0.45;
+        // Kompat-Felder
         this.bgmBuffers = {};
         this.sfxBuffers = {};
     }
@@ -29,6 +34,47 @@ class AudioManager {
             } catch (e) { console.error('AudioContext Error:', e); }
         }
         if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        this._loadSongs();
+    }
+
+    // Happy-Songs aus "sound files/" als HTMLAudio-Elemente (läuft auch bei file://,
+    // im Gegensatz zu fetch()+decodeAudioData, das Chromium für lokale Dateien blockt).
+    _loadSongs() {
+        if (this._songsRequested) return;
+        this._songsRequested = true;
+        const files = [
+            'bombinsound-happy-kids-background-music-15-second-499550.mp3',
+            'freesound_community-cute-music-26476.mp3',
+            'freesound_community-mr-23142.mp3',
+            'sergequadrado-happy-funky-jingle-449587.mp3',
+            'sergequadrado-the-best-day-ever-loop-533529.mp3',
+            'soulfuljamtracks-happy-music-loop-500008.mp3',
+        ];
+        files.forEach((f) => {
+            try {
+                const a = new Audio(encodeURI('sound files/' + f));
+                a.loop = true; a.preload = 'auto'; a.volume = this.songVolume;
+                this.songs.push(a);
+            } catch (e) { /* Datei überspringen */ }
+        });
+    }
+
+    // Zufälligen Happy-Song als Loop starten (für audioTheme 'SONGS')
+    playRandomSong() {
+        if (this.songs.length === 0) return false;
+        this.stopCurrentBGM();
+        const a = this.songs[Math.floor(Math.random() * this.songs.length)];
+        a.loop = true; a.volume = this.isMuted ? 0 : this.songVolume;
+        try { a.currentTime = 0; } catch (e) {}
+        const p = a.play(); if (p && p.catch) p.catch(() => {});   // Autoplay-Reject schlucken
+        this.currentBGM = a;
+        return true;
+    }
+    stopCurrentBGM() {
+        if (this.currentBGM) {
+            try { this.currentBGM.pause(); this.currentBGM.currentTime = 0; } catch (e) {}
+            this.currentBGM = null;
+        }
     }
 
     // ---- kleine Bausteine -------------------------------------------------
@@ -270,6 +316,22 @@ class AudioManager {
         this._blip(520, t, 0.12, { type: 'sine', vol: 0.28, to: 300 });
         this._twinkle(t + 0.05, 880, 0.13);
     }
+    playFart() {   // PUPSI das Pupshörnchen: putziges "pfffrt" (Rausch-Burst + wabernder Ton)
+        if (!this.ctx || this.isMuted || !this._throttle('fart', 70)) return;
+        const t = this._now();
+        // wabernder, fallender Brummton (komisch, aber niedlich)
+        const osc = this.ctx.createOscillator(), g = this.ctx.createGain(), lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(70, t + 0.22);
+        lfo.type = 'square'; lfo.frequency.value = 22; lg.gain.value = 28; lfo.connect(lg).connect(osc.frequency);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+        osc.connect(g).connect(this.masterGain); lfo.start(t); osc.start(t); lfo.stop(t + 0.28); osc.stop(t + 0.28);
+        // luftiger Rausch-Anteil
+        const n = this._noise(0.2), f = this.ctx.createBiquadFilter(), ng = this.ctx.createGain();
+        f.type = 'bandpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.2); f.Q.value = 1.2;
+        ng.gain.setValueAtTime(0.16, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        n.connect(f).connect(ng).connect(this.masterGain); n.start(t); n.stop(t + 0.22);
+        setTimeout(() => { this.cleanupNode(osc); this.cleanupNode(lfo); this.cleanupNode(n); }, 360);
+    }
     playEvilLaugh() {   // Kill-Streak: fröhliches Glucksen "hihihi"
         if (!this.ctx || this.isMuted || !this._throttle('giggle', 1200)) return;
         const t = this._now();
@@ -367,22 +429,36 @@ class AudioManager {
         bar();
     }
 
-    // ---- BGM-Steuerung (immer prozedural) ---------------------------------
-    startBGM() { this.init(); this.playChiptune('1'); }
-    stopBGM() { this.stopAllSustains(); this.stopChiptune(); }
+    // ---- BGM-Steuerung: 'SONGS' (zufälliger MP3-Loop je Level) | 'CLASSIC' (Chiptune) ----
+    startBGM() {
+        this.init();
+        this.stopChiptune(); this.stopCurrentBGM();
+        this._songLevel = -1;                 // erzwingt frische Songwahl im nächsten updateBGM
+        if (this.audioTheme === 'CLASSIC') this.playChiptune('1');
+        // SONGS: updateBGM() (jeden Frame im Spiel) wählt einen Song, sobald geladen
+    }
+    stopBGM() { this.stopAllSustains(); this.stopChiptune(); this.stopCurrentBGM(); }
     updateBGM(level, isBossActive = false) {
         if (!this.ctx) return;
-        this.playChiptune(isBossActive ? 'BOSS' : String(((level - 1) % 4) + 1));
+        if (this.audioTheme === 'CLASSIC') {
+            this.playChiptune(isBossActive ? 'BOSS' : String(((level - 1) % 4) + 1));
+            return;
+        }
+        // SONGS: bei jedem Levelbeginn (oder wenn nichts läuft) neuen Zufallssong als Loop
+        if (level !== this._songLevel || !this.currentBGM) {
+            if (this.playRandomSong()) this._songLevel = level;   // erst wenn ein Song wirklich läuft
+        }
     }
-    // Kompat-Stubs (früher MP3-Tracks) — jetzt no-op / Chiptune
+    // Kompat-Stubs
     playMusicTrack() {}
-    playRandomLevelTrack() { this.playChiptune('1'); }
+    playRandomLevelTrack() { this.playRandomSong(); }
     loadTrack() {}
     playSfx() {}
 
     toggleMute() {
         this.isMuted = !this.isMuted;
         if (this.masterGain) this.masterGain.gain.value = this.isMuted ? 0 : 0.5;
+        if (this.currentBGM) this.currentBGM.volume = this.isMuted ? 0 : this.songVolume;   // Song-Loop mit stummen
         if (this.isMuted) { this.stopAllSustains(); this.stopChiptune(); }
         return this.isMuted;
     }

@@ -12,6 +12,9 @@ const CONFIG = {
     JETPACK_THRUST: 2900,     // Aufwärtsbeschleunigung pro s (überwindet Schwerkraft)
     JETPACK_MAX_RISE: 520,    // maximale Steiggeschwindigkeit
     JETPACK_REFUEL: 0.5,      // Treibstoff/s, der am Boden nachläuft
+    // --- PUPSI: Pups-Flug (eingebaut, begrenzter Pups-Vorrat wie ein Jetpack) ---
+    FART_FUEL: 2.6,           // Sekunden Pups-Vorrat (Volltank)
+    FART_REFUEL: 0.7,         // Vorrat/s, der am Boden nachläuft
     // --- Schwimmen (Wasserlevel) ---
     SWIM_GRAVITY: 430,        // sanftes Absinken
     SWIM_STROKE: 470,         // Auftriebs-Impuls je Schwimmzug (Sprungtaste)
@@ -82,6 +85,22 @@ const CONFIG = {
         // hat:'crown' = Blütenkranz, wings:true = Feenflügel, cuddle:true = Spezial-Umarmung.
         LINA:  { name: 'LINA', jump: 1.1, speed: 1.05, dmg: 1.0, airJumps: 1, cuddle: true,
                  hat: 'crown', wings: true,
-                 shirt: '#FF9FC9', shirtDk: '#E86FB0', overall: '#C9A0FF', skin: '#FBE0C8', boots: '#FFB3DC' }
+                 shirt: '#FF9FC9', shirtDk: '#E86FB0', overall: '#C9A0FF', skin: '#FBE0C8', boots: '#FFB3DC' },
+
+        // --- Tier-Figuren (kind steuert die prozedurale Zeichnung in player.js) ---
+        // PUPSI das Pupshörnchen: Pups-Flug (fartFly = eingebautes Jetpack) + Rundum-Pups-Blast (fartBlast)
+        PUPSI:   { name: 'PUPSI', jump: 1.0, speed: 1.0, dmg: 1.0, airJumps: 0, kind: 'squirrel',
+                   fartFly: true, fartBlast: true,
+                   shirt: '#C68A52', shirtDk: '#8A5A2C', overall: '#9C6736', skin: '#F0D9B8' },
+        // BRUMMEL die Hummel: Dauer-Schwebeflug (hover) + Honig-Klecks
+        BRUMMEL: { name: 'BRUMMEL', jump: 1.0, speed: 1.1, dmg: 1.0, airJumps: 0, kind: 'bee',
+                   hover: true, honey: true,
+                   shirt: '#FFD86B', shirtDk: '#3a3a44', overall: '#E8B23A', skin: '#FFF0C0' },
+        // HOPPEL der Hase: Dreifach-Hüpfer + Möhren-Wurf
+        HOPPEL:  { name: 'HOPPEL', jump: 1.15, speed: 1.05, dmg: 1.0, airJumps: 2, kind: 'bunny', carrot: true,
+                   shirt: '#FFE0EC', shirtDk: '#E8B0C8', overall: '#FF9FC9', skin: '#FFFFFF' },
+        // QUAKI der Frosch: Mega-Sprung + Klebezunge (zieht Gegner & Bonbons ran)
+        QUAKI:   { name: 'QUAKI', jump: 1.4, speed: 1.0, dmg: 1.0, airJumps: 0, kind: 'frog', tongue: true,
+                   shirt: '#7FD06A', shirtDk: '#3E9E3E', overall: '#FFFFFF', skin: '#DFF0C0' }
     }
 };

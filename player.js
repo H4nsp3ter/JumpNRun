@@ -27,6 +27,7 @@ class Player extends Entity {
 
         // Roundhouse-Kick (nur Chuck)
         this.kickTimer = 0;   // Animations-Dauer
+        this.kickDur = 0.32;  // Gesamtdauer der Spezial-Animation (für Fortschritt 0..1)
         this.kickCd = 0;      // Abklingzeit
         // Jetpack-Power-up
         this.hasJetpack = false;
@@ -34,6 +35,10 @@ class Player extends Entity {
         this.jetpackMax = CONFIG.JETPACK_FUEL;
         this.jetpackActive = false;     // für Antriebs-Sound/Effekt diesen Frame
         this.jetpackLife = 0;           // Sekunden bis das Jetpack wieder verschwindet (~60s)
+        // PUPSI: eingebauter Pups-Flug mit begrenztem Vorrat (eigener Treibstoff, kein Item)
+        this.fartMax = CONFIG.FART_FUEL;
+        this.fartFuel = CONFIG.FART_FUEL;   // startet voll
+        this.fartFlying = false;            // diesen Frame im Pups-Flug? (für Sitz-Pose)
         // Schwimmen
         this.inWater = false;
     }
@@ -78,6 +83,7 @@ class Player extends Entity {
         if (this.kickTimer > 0) this.kickTimer -= dt;
         if (this.kickCd > 0) this.kickCd -= dt;
         this.jetpackActive = false;
+        this.fartFlying = false;
         // Jetpack verschwindet nach ~60s wieder
         if (this.hasJetpack) {
             this.jetpackLife -= dt;
@@ -154,26 +160,44 @@ class Player extends Entity {
             } else {
                 // --- normale Schwerkraft + Sprung ---
                 this.vy += CONFIG.GRAVITY * dt;
-                if (this.vy > CONFIG.MAX_FALL_SPEED) this.vy = CONFIG.MAX_FALL_SPEED;
+                let maxFall = CONFIG.MAX_FALL_SPEED;
+                if (this.char.hover && this.vy > 150) maxFall = 150;        // BRUMMEL: sanftes Gleiten
+                if (this.vy > maxFall) this.vy = maxFall;
                 const jForce = CONFIG.JUMP_FORCE * this.char.jump * (this.isBoosted ? 1.5 : 1);
-                const jetReady = this.hasJetpack && this.jetpackFuel > 0;
+                // Flug: Item-Jetpack ODER eingebaut (PUPSI Pups-Flug / BRUMMEL Schweben)
+                const canFly = (this.hasJetpack && this.jetpackFuel > 0) || (this.char.fartFly && this.fartFuel > 0) || this.char.hover;
                 if (input.isJustPressed('Space') && this.grounded && !this.isCrouching) {
                     this.vy = -jForce; this.grounded = false; game.audio.playJump();
                     game.particles.spawn(this.x + this.w/2, this.y + this.h, this.isBoosted ? '#00FFCC' : '#CCC', 30, 200);
-                } else if (input.isJustPressed('Space') && !this.grounded && this.airJumpsLeft > 0 && !jetReady) { // Doppelsprung (entfällt mit Jetpack)
+                } else if (input.isJustPressed('Space') && !this.grounded && this.airJumpsLeft > 0 && !canFly) { // Mehrfachsprung (entfällt bei Flug)
                     this.vy = -jForce * 0.92; this.airJumpsLeft--; game.audio.playJump();
                     game.particles.spawn(this.x + this.w/2, this.y + this.h, '#FFF', 18, 240);
                 }
                 if (input.isJustReleased('Space') && this.vy < 0) this.vy *= 0.5;
 
-                // --- Jetpack: Sprungtaste in der Luft GEHALTEN -> Schub, solange Treibstoff ---
-                if (jetReady && !this.grounded && input.isDown('Space') && !input.isJustPressed('Space')) {
-                    this.vy -= CONFIG.JETPACK_THRUST * dt;
-                    if (this.vy < -CONFIG.JETPACK_MAX_RISE) this.vy = -CONFIG.JETPACK_MAX_RISE;
-                    this.jetpackFuel = Math.max(0, this.jetpackFuel - dt);
+                // --- Flug: Sprungtaste in der Luft GEHALTEN -> Schub nach oben ---
+                if (canFly && !this.grounded && input.isDown('Space') && !input.isJustPressed('Space')) {
+                    let thr = CONFIG.JETPACK_THRUST, maxR = CONFIG.JETPACK_MAX_RISE;
+                    if (this.char.hover) { thr *= 0.6; maxR *= 0.55; }     // Hummel: sanfter Auftrieb
+                    this.vy -= thr * dt;
+                    if (this.vy < -maxR) this.vy = -maxR;
+                    if (this.hasJetpack && !this.char.fartFly && !this.char.hover) this.jetpackFuel = Math.max(0, this.jetpackFuel - dt);
                     this.jetpackActive = true;
-                    game.particles.spawnFire(this.x + this.w * 0.5, this.y + this.h, 2, this.w * 0.5, 8);
-                    if (game.audio.playJetpack) game.audio.playJetpack();
+                    if (this.char.fartFly) {                                // PUPSI: sitzt, deutliche braune Pups-Wolke aus dem Hintern
+                        this.fartFuel = Math.max(0, this.fartFuel - dt);    // Pups-Vorrat verbrauchen
+                        this.fartFlying = true;                             // Sitz-Pose in _drawCritter
+                        const dirF = this.facingRight ? 1 : -1;
+                        const buttX = this.x + this.w * 0.5 - dirF * this.w * 0.32;   // Hintern (hinten)
+                        const buttY = this.y + this.h - 6;
+                        game.particles.spawn(buttX, buttY, '#8a5a2c', 4, 150, 0.75, false);   // dunkelbraun
+                        game.particles.spawn(buttX, buttY + 4, '#b07b3c', 3, 110, 0.6, false); // hellbraun
+                        if (game.audio.playFart) game.audio.playFart();
+                    } else if (this.char.hover) {                           // BRUMMEL: Summen
+                        if (game.audio.playJetpack) game.audio.playJetpack();
+                    } else {                                                // Item-Jetpack: Flamme
+                        game.particles.spawnFire(this.x + this.w * 0.5, this.y + this.h, 2, this.w * 0.5, 8);
+                        if (game.audio.playJetpack) game.audio.playJetpack();
+                    }
                 }
             }
         }
@@ -188,6 +212,9 @@ class Player extends Entity {
         if (this.grounded) this.airJumpsLeft = this.char.airJumps;   // Luftsprünge am Boden auffüllen
         if (this.grounded && this.hasJetpack && this.jetpackFuel < this.jetpackMax) {
             this.jetpackFuel = Math.min(this.jetpackMax, this.jetpackFuel + CONFIG.JETPACK_REFUEL * dt);
+        }
+        if (this.grounded && this.char.fartFly && this.fartFuel < this.fartMax) {   // PUPSI: Pups-Vorrat am Boden auffüllen
+            this.fartFuel = Math.min(this.fartMax, this.fartFuel + CONFIG.FART_REFUEL * dt);
         }
 
         if (this.grounded && !this.isClimbing) {
@@ -223,28 +250,46 @@ class Player extends Entity {
             }
         }
 
-        // --- SPEZIAL: Roundhouse-Kick (Chuck) / Knutsch-Knuddel-Attacke (Lina) — schubst Gegner weg ---
-        if ((this.char.roundhouse || this.char.cuddle) && this.kickCd <= 0 && input.isJustPressed('KeyE') && !this.isClimbing && !this.isDead) {
-            this.kickTimer = 0.32; this.kickCd = 0.7;
-            if (game.audio.playRoundhouse) game.audio.playRoundhouse();
-            game.triggerShake(22, 0.3);
+        // --- SPEZIAL (E): wegpusten / knuddeln / Klebezunge — je nach Figur ---
+        const hasSpecial = this.char.cuddle || this.char.roundhouse || this.char.fartBlast || this.char.honey || this.char.carrot || this.char.tongue;
+        if (hasSpecial && this.kickCd <= 0 && input.isJustPressed('KeyE') && !this.isClimbing && !this.isDead) {
+            // Spezial-Aktionen deutlich langsamer animieren, damit man den Witz sieht
+            const dur = (this.char.kind ? 0.95 : 0.5);
+            this.kickTimer = dur; this.kickDur = dur; this.kickCd = dur + 0.35;
+            const range = this.char.tongue ? 380 : (this.char.carrot ? 300 : (this.char.fartBlast ? 260 : 200));
             const dir = this.facingRight ? 1 : -1;
             const cxp = this.x + this.w / 2, cyp = this.y + this.h / 2;
-            game.particles.spawn(cxp + dir * 70, cyp, '#ffffff', 16, 360, 0.4, true);
+            if (this.char.fartBlast && game.audio.playFart) game.audio.playFart();
+            else if (game.audio.playRoundhouse) game.audio.playRoundhouse();
+            game.triggerShake(this.char.fartBlast ? 26 : 20, 0.3);
+            if (this.char.fartBlast) {
+                // PUPSI: dreht sich um, bückt sich -> dicke braune Pups-Wolke in Richtung Gegner (vorn)
+                const byp = this.y + this.h * 0.62;                        // Hintern-Höhe
+                game.particles.spawn(cxp + dir * 50, byp, '#8a5a2c', 22, 460, 0.7, true);
+                game.particles.spawn(cxp + dir * 90, byp, '#b07b3c', 16, 380, 0.6, true);
+                game.particles.spawn(cxp + dir * 130, byp, '#caa06a', 10, 300, 0.55, true);
+            } else {
+                const col = this.char.honey ? '#FFD36E' : (this.char.carrot ? '#FF9F4D' : (this.char.tongue ? '#FF6FA8' : '#ffffff'));
+                game.particles.spawn(cxp + dir * 70, cyp, col, 16, 360, 0.5, true);
+            }
             for (const e of game.levelGen.enemies) {
                 if (e.dead) continue;
                 const ex = e.x + e.w / 2, ey = e.y + e.h / 2;
-                const dx = (ex - cxp) * dir;                       // vor Chuck in Blickrichtung
-                if (dx > -40 && dx < 200 && Math.abs(ey - cyp) < 140) {   // nur etwas weiter als der Schläger (~140px)
-                    if (e.isBoss) { if (e.takeDamage) e.takeDamage(120, game, 'FLAME'); }   // Boss fliegt nicht, kassiert aber
-                    else {
-                        e.kicked = true; e.kickDir = dir; e.noStomp = false;
-                        const sp = 1650 + Math.random() * 350;             // wie vorher, nur etwas stärker
-                        const ang = (20 + Math.random() * 10) * Math.PI / 180;  // 20–30° nach oben -> Bogenflug
-                        e.vx = dir * sp;
-                        e.vy = -sp * Math.tan(ang);
-                        e.spin = 0;
-                    }
+                const dx = (ex - cxp) * dir;
+                const inRange = (dx > -40 && dx < range && Math.abs(ey - cyp) < 150);   // gerichtet nach vorn
+                if (!inRange) continue;
+                if (e.isBoss) { if (e.takeDamage) e.takeDamage(120, game, 'FLAME'); }   // Boss fliegt nicht, kassiert aber
+                else {
+                    e.kicked = true; e.kickDir = dir; e.noStomp = false;
+                    const sp = 1650 + Math.random() * 350;
+                    const ang = (20 + Math.random() * 10) * Math.PI / 180;  // 20–30° nach oben -> Bogenflug
+                    e.vx = e.kickDir * sp; e.vy = -sp * Math.tan(ang); e.spin = 0;
+                }
+            }
+            // QUAKI: Klebezunge zieht Bonbons/Items heran (werden im nächsten Frame eingesammelt)
+            if (this.char.tongue && game.levelGen.items) {
+                for (const it of game.levelGen.items) {
+                    if (Math.hypot((it.x + it.w / 2) - cxp, (it.y + it.h / 2) - cyp) < range) { it.x = cxp - it.w / 2; it.y = cyp - it.h / 2; }
                 }
             }
         }
@@ -373,9 +418,19 @@ class Player extends Entity {
                         }
                     }
                     else if (axis === 'y') {
-                        if (this.vy > 0) { this.y = p.y - this.h; this.grounded = true; }
-                        else if (this.vy < 0) { this.y = p.y + p.h; if (p.bumpable && !p.used && game && game.bumpBlock) game.bumpBlock(p); } // CLASSIC: Kopf-Anschlag
-                        this.vy = 0;
+                        if (this.vy > 0) { this.y = p.y - this.h; this.grounded = true; this.vy = 0; }
+                        else if (this.vy < 0) {
+                            // Kopf-Anschlag NUR bei normalen Blöcken/dünnen Plattformen (kleine Höhe).
+                            // Hohe Röhren/Wände (h bis ~2100) NICHT nach unten teleportieren —
+                            // das war die Ursache für "plötzliche Verwundung beim Hochspringen": ein
+                            // seitlicher Streifer wird stattdessen horizontal weggeschoben, Sprung läuft weiter.
+                            if (p.h < 200) {
+                                this.y = p.y + p.h; this.vy = 0;
+                                if (p.bumpable && !p.used && game && game.bumpBlock) game.bumpBlock(p);
+                            } else {
+                                this.x = (this.x + this.w / 2 < p.x + p.w / 2) ? p.x - this.w : p.x + p.w;
+                            }
+                        }
                     }
                 }
             }
@@ -547,6 +602,320 @@ class Player extends Entity {
         ctx.restore();
     }
 
+    // --- Tier-Figuren (PUPSI/ZOTTEL/BRUMMEL/HOPPEL/QUAKI): süße, prozedural gezeichnete Tierchen ---
+    // Gleicher lokaler Raum wie drawMarioBody (Füße ~y68, Kopf oben), damit Fuß-Ausrichtung
+    // und Waffenarm (sX=0, sY≈-21) weiter passen.
+    _drawCritter(ctx, frame) {
+        const kind = this.char.kind;
+        const crouch = this.isCrouching;
+        const air = !this.grounded && !crouch;
+        const walk = (this.state === 'WALK');
+        const cyc = walk ? (frame / 8) * Math.PI * 2 : 0;
+        const bob = walk ? -Math.abs(Math.sin(cyc)) * 4 : (air ? 0 : Math.sin(performance.now() / 600) * 1.5);
+
+        let BODY = this.char.shirt, DARK = this.char.shirtDk, BELLY = this.char.skin, ACC = this.char.overall;
+        if (this.isStar) {                                  // Stern-Flash (unverwundbar)
+            const c = ['#ffffff', '#ffe14d', '#54d8ff', '#9dff54'][Math.floor(performance.now() / 70) % 4];
+            BODY = c; DARK = c; BELLY = c; ACC = c;
+        }
+        ctx.save();
+        ctx.translate(0, bob);
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+        // PUPSI Pups-Blast (E): dreht sich um, bückt sich, dicke braune Wolke nach vorn (+x)
+        if (this.kickTimer > 0 && this.char.fartBlast) {
+            this._drawSquirrelFart(ctx, BODY, DARK, BELLY, ACC);
+            ctx.restore();
+            return;
+        }
+
+        // Hummel: Flügelchen hinter dem Körper (flattern schnell)
+        if (kind === 'bee') {
+            const flap = Math.sin(performance.now() / 45) * 0.4;
+            ctx.save(); ctx.globalAlpha = 0.6;
+            for (const sgn of [-1, 1]) {
+                ctx.save(); ctx.translate(sgn * 8, -18); ctx.rotate(sgn * (0.45 + flap));
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.beginPath(); ctx.ellipse(sgn * 20, -8, 20, 12, sgn * 0.4, 0, 6.3); ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+        // Eichhörnchen: große buschige Schwanzkringel hinter dem Körper
+        if (kind === 'squirrel') {
+            ctx.save(); ctx.fillStyle = DARK;
+            ctx.beginPath(); ctx.moveTo(-12, 30);
+            ctx.quadraticCurveTo(-58, 24, -44, -18);
+            ctx.quadraticCurveTo(-36, -54, -8, -44);
+            ctx.quadraticCurveTo(-30, -34, -26, -8);
+            ctx.quadraticCurveTo(-22, 18, -12, 30); ctx.fill();
+            ctx.fillStyle = BODY; ctx.globalAlpha = 0.55;
+            ctx.beginPath(); ctx.ellipse(-34, -18, 9, 22, -0.3, 0, 7); ctx.fill();
+            ctx.restore();
+        }
+
+        // --- Beine / Füße ---
+        const sw = walk ? Math.sin(cyc) * 9 : 0;
+        const footY = 68;
+        const web = (kind === 'frog');
+        // Fuß an beliebiger Position (für gegliederte Beine)
+        const footAt = (fx, fy, ang) => {
+            ctx.save(); ctx.translate(fx, fy); if (ang) ctx.rotate(ang);
+            ctx.fillStyle = DARK;
+            if (web) { ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.lineTo(7, 9); ctx.lineTo(-7, 9); ctx.closePath(); ctx.fill(); }
+            else { ctx.beginPath(); ctx.roundRect(-9, -1, 20, 11, 5); ctx.fill(); }
+            ctx.restore();
+        };
+        // Gegliedertes Bein (Hüfte -> Knie -> Fuß), wie bei Lina
+        const legA = (hipX, hy, thigh, knee) => {
+            const kx = hipX + Math.sin(thigh) * 18, ky = hy + Math.cos(thigh) * 18;
+            const fx = kx + Math.sin(knee) * 18, fy = ky + Math.cos(knee) * 18;
+            ctx.strokeStyle = BODY; ctx.lineWidth = 13;
+            ctx.beginPath(); ctx.moveTo(hipX, hy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+            footAt(fx, fy - 1, Math.sin(thigh) * 0.25);
+        };
+
+        let bodyDrop = 0;
+        if (this.fartFlying) {
+            // PUPSI Pups-Flug: Sitz-Pose — Beinchen nach VORNE (+x) angezogen
+            ctx.strokeStyle = BODY; ctx.lineWidth = 13;
+            ctx.beginPath(); ctx.moveTo(-4, 26); ctx.lineTo(22, 18); ctx.lineTo(40, 30); ctx.stroke();   // unteres Bein
+            ctx.beginPath(); ctx.moveTo(2, 24); ctx.lineTo(26, 10); ctx.lineTo(44, 20); ctx.stroke();    // oberes Bein
+            ctx.fillStyle = DARK;
+            ctx.beginPath(); ctx.roundRect(34, 26, 20, 11, 5); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(38, 16, 20, 11, 5); ctx.fill();
+        } else if (crouch) {
+            // Duck/Hocke: tief geduckt, Knie weit nach außen, Körper sinkt zwischen die Beinchen
+            bodyDrop = 38;
+            ctx.strokeStyle = BODY; ctx.lineWidth = 13;
+            ctx.beginPath(); ctx.moveTo(-7, 44); ctx.lineTo(-32, 52); ctx.lineTo(-22, footY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(7, 44); ctx.lineTo(32, 52); ctx.lineTo(22, footY); ctx.stroke();
+            footAt(-22, footY, 0); footAt(22, footY, 0);
+        } else if (air && !this.char.fartFly) {
+            // Sprung: gegliederte Beine wie bei Lina (hinten gestreckt, vorne angezogen)
+            legA(-8, 22, -0.6, -0.95);    // hinteres Bein gestreckt
+            legA(8, 22, 1.2, -0.1);       // vorderes Bein: Knie hoch, Schienbein getuckt
+        } else {
+            // Stehen / Laufen: kurze Stummelbeinchen mit Schwung
+            ctx.strokeStyle = BODY; ctx.lineWidth = 13;
+            ctx.beginPath(); ctx.moveTo(-9, 28); ctx.lineTo(-12 - sw, footY + 3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(9, 28); ctx.lineTo(12 + sw, footY + 3); ctx.stroke();
+            footAt(-12 - sw, footY + 3, 0); footAt(12 + sw, footY + 3, 0);
+        }
+        if (bodyDrop) ctx.translate(0, bodyDrop);   // Körper/Kopf/Arme beim Ducken absenken
+
+        // --- Hinterer Arm (gegengleich schwingend) ---
+        const bax = -16 + (walk ? Math.cos(cyc) * -6 : 0);
+        ctx.strokeStyle = DARK; ctx.lineWidth = 10;
+        ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(bax, 10); ctx.stroke();
+        ctx.fillStyle = BODY; ctx.beginPath(); ctx.arc(bax, 12, 5, 0, 7); ctx.fill();
+
+        // --- Rumpf (pummeliger Bauch) ---
+        ctx.fillStyle = BODY;
+        ctx.beginPath(); ctx.ellipse(0, 2, 24, 32, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = BELLY;                              // heller Bauchfleck
+        ctx.beginPath(); ctx.ellipse(0, 8, 14, 22, 0, 0, 7); ctx.fill();
+        if (kind === 'bee') {                               // Hummel-Streifen
+            ctx.fillStyle = DARK; ctx.globalAlpha = 0.9;
+            for (const yy of [-12, 2, 16]) { ctx.beginPath(); ctx.ellipse(0, yy, 24 - Math.abs(yy) * 0.25, 5, 0, 0, 7); ctx.fill(); }
+            ctx.globalAlpha = 1;
+        }
+
+        // --- Vorderer Arm (Waffenarm wird separat gezeichnet; hier nur ein Pfötchen vorn) ---
+        const fax = 16 + (walk ? Math.cos(cyc) * 6 : 0);
+        ctx.strokeStyle = BODY; ctx.lineWidth = 10;
+        ctx.beginPath(); ctx.moveTo(8, -14); ctx.lineTo(fax, 10); ctx.stroke();
+        ctx.fillStyle = BELLY; ctx.beginPath(); ctx.arc(fax, 12, 5, 0, 7); ctx.fill();
+
+        // --- Kopf ---
+        this._drawCritterHead(ctx, kind, BODY, DARK, BELLY, ACC);
+
+        // --- Spezial-Effekt (E): Honig-Klecks / Möhren-Wurf / Klebezunge sichtbar nach vorn (+x) ---
+        if (this.kickTimer > 0 && (this.char.honey || this.char.carrot || this.char.tongue)) {
+            this._drawCritterSpecial(ctx);
+        }
+
+        ctx.restore();
+    }
+
+    // Sichtbares Spezial-Objekt während der E-Attacke (lokaler Raum, +x = Blickrichtung)
+    _drawCritterSpecial(ctx) {
+        const prog = 1 - Math.max(0, this.kickTimer) / (this.kickDur || 0.32);     // 0 -> 1
+        const reach = Math.sin(prog * Math.PI);                  // 0..1..0 Ausfahr-Schwung
+        if (this.char.tongue) {
+            // QUAKI: lange rosa Klebezunge aus dem Mund (Kopf bei y≈-42)
+            const len = 30 + reach * 110;
+            ctx.strokeStyle = '#FF6FA8'; ctx.lineWidth = 11; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(8, -34); ctx.quadraticCurveTo(len * 0.6, -30 + reach * 8, len, -26 + reach * 6); ctx.stroke();
+            ctx.strokeStyle = '#FF9CC6'; ctx.lineWidth = 4;       // heller Mittelstreifen
+            ctx.beginPath(); ctx.moveTo(8, -34); ctx.quadraticCurveTo(len * 0.6, -30 + reach * 8, len, -26 + reach * 6); ctx.stroke();
+            ctx.fillStyle = '#FF5E9E'; ctx.beginPath(); ctx.arc(len, -26 + reach * 6, 9, 0, 7); ctx.fill();   // klebrige Spitze
+            ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(len - 3, -29 + reach * 6, 3, 0, 7); ctx.fill();
+        } else if (this.char.carrot) {
+            // HOPPEL: dicke orange Möhre fliegt waagerecht nach vorn (Spitze voran)
+            const cx = 34 + reach * 78, cy = 2 - reach * 4;
+            // Flugspur
+            ctx.fillStyle = 'rgba(255,159,77,0.4)'; ctx.beginPath(); ctx.arc(cx - 26, cy, 6, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx - 40, cy + 2, 4, 0, 7); ctx.fill();
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(-Math.PI / 2 - 0.15);    // liegend, Spitze nach vorn (+x)
+            ctx.fillStyle = '#FF8A2B'; ctx.beginPath(); ctx.moveTo(-11, -22); ctx.lineTo(11, -22); ctx.lineTo(0, 26); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#E06A12'; ctx.lineWidth = 2;       // Rillen
+            for (const ry of [-14, -6, 2]) { ctx.beginPath(); ctx.moveTo(-7, ry); ctx.lineTo(7, ry); ctx.stroke(); }
+            ctx.fillStyle = '#4Fae3E'; for (const lx of [-6, 0, 6]) { ctx.beginPath(); ctx.ellipse(lx, -25, 3.4, 11, lx * 0.07, 0, 7); ctx.fill(); }   // grünes Kraut
+            ctx.restore();
+        } else if (this.char.honey) {
+            // BRUMMEL: goldener Honig-Klecks spritzt nach vorn (mit Tropfen)
+            const hx = 28 + reach * 80;
+            ctx.fillStyle = '#E8A93A';
+            ctx.beginPath(); ctx.arc(hx, 0, 13 + reach * 5, 0, 7); ctx.fill();
+            ctx.fillStyle = '#FFD36E'; ctx.beginPath(); ctx.arc(hx, 0, 9 + reach * 4, 0, 7); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(hx - 4, -4, 3.5, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#E8A93A'; ctx.lineWidth = 5; ctx.lineCap = 'round';   // klebriger Faden zur Pfote
+            ctx.beginPath(); ctx.moveTo(16, 8); ctx.quadraticCurveTo((hx + 16) / 2, 14, hx, 2); ctx.stroke();
+            ctx.fillStyle = '#FFD36E';                              // herabtropfende Klekse
+            ctx.beginPath(); ctx.arc(hx + 6, 14 + reach * 8, 4, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(hx - 8, 12 + reach * 5, 3, 0, 7); ctx.fill();
+        }
+    }
+
+    // PUPSI Pups-Blast: umgedreht & gebückt — Hintern zeigt nach vorn (+x, zum Gegner),
+    // Kopf nach hinten/unten, dicke braune Wolke schießt nach vorn. Lokaler Raum wie _drawCritter.
+    _drawSquirrelFart(ctx, BODY, DARK, BELLY, ACC) {
+        const prog = 1 - Math.max(0, this.kickTimer) / (this.kickDur || 0.32);      // 0 -> 1
+        const push = Math.sin(prog * Math.PI);                    // Bück-Schwung 0..1..0
+
+        // Beine: gespreizt aufgestützt (gebückt)
+        ctx.strokeStyle = BODY; ctx.lineWidth = 13;
+        ctx.beginPath(); ctx.moveTo(-2, 22); ctx.lineTo(-18, 50); ctx.lineTo(-22, 68); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(6, 24); ctx.lineTo(20, 50); ctx.lineTo(18, 68); ctx.stroke();
+        ctx.fillStyle = DARK;
+        ctx.beginPath(); ctx.roundRect(-31, 66, 20, 11, 5); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(9, 66, 20, 11, 5); ctx.fill();
+
+        // Vorderpfötchen am Boden abgestützt (vorgebeugt) — vorne unten
+        ctx.strokeStyle = DARK; ctx.lineWidth = 9;
+        ctx.beginPath(); ctx.moveTo(-12, 6); ctx.lineTo(-30, 40); ctx.stroke();
+        ctx.fillStyle = BELLY; ctx.beginPath(); ctx.arc(-30, 42, 5, 0, 7); ctx.fill();
+
+        // Buschelschwanz hoch über dem Rücken (nach hinten/oben gekringelt)
+        ctx.save(); ctx.fillStyle = DARK;
+        ctx.beginPath(); ctx.moveTo(-6, -18);
+        ctx.quadraticCurveTo(-44, -36, -30, -68);
+        ctx.quadraticCurveTo(-16, -92, 14, -78);
+        ctx.quadraticCurveTo(-8, -70, -8, -44);
+        ctx.quadraticCurveTo(-4, -28, -6, -18); ctx.fill();
+        ctx.fillStyle = BODY; ctx.globalAlpha = 0.5;
+        ctx.beginPath(); ctx.ellipse(-22, -58, 8, 20, -0.5, 0, 7); ctx.fill();
+        ctx.restore();
+
+        // Rumpf schräg: Hintern dick nach vorn-oben (+x), Schultern nach hinten-unten (-x)
+        ctx.save(); ctx.rotate(-0.5 - push * 0.15);
+        ctx.fillStyle = BODY;
+        ctx.beginPath(); ctx.ellipse(0, -2, 26, 30, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = BELLY; ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.ellipse(-6, 2, 12, 18, 0, 0, 7); ctx.fill();
+        ctx.restore();
+
+        // dicker, runder Po nach vorn (+x) — Pups-Düse
+        const buttX = 22 + push * 8;
+        ctx.fillStyle = BODY;
+        ctx.beginPath(); ctx.arc(buttX, 4, 20, 0, 7); ctx.fill();
+        ctx.fillStyle = DARK; ctx.globalAlpha = 0.25;
+        ctx.beginPath(); ctx.ellipse(buttX + 8, 4, 7, 12, 0, 0, 7); ctx.fill();   // Po-Spalte-Schattierung
+        ctx.globalAlpha = 1;
+
+        // kleiner Kopf hinten unten (er bückt sich, schaut zwischen den Beinen durch)
+        ctx.fillStyle = BODY; ctx.beginPath(); ctx.arc(-20, 16, 14, 0, 7); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-26, 14, 4, 0, 7); ctx.fill();
+        ctx.fillStyle = '#2a1a0f'; ctx.beginPath(); ctx.arc(-27, 15, 2.2, 0, 7); ctx.fill();
+        ctx.strokeStyle = DARK; ctx.lineWidth = 2;                                // schelmisches Grinsen
+        ctx.beginPath(); ctx.arc(-22, 20, 5, 0.1, Math.PI - 0.1); ctx.stroke();
+
+        // dicke braune Pups-Wolke nach vorn (+x) — deutlich sichtbar (zusätzlich zu Partikeln)
+        ctx.save();
+        const alpha = 0.55 + push * 0.35;
+        const browns = ['rgba(138,90,44,A)', 'rgba(176,123,60,A)', 'rgba(202,160,106,A)'];
+        const puffs = [[40, 2, 16], [58, -6, 13], [60, 14, 12], [78, 4, 15], [96, -4, 12], [98, 12, 11], [116, 4, 13]];
+        puffs.forEach((p, i) => {
+            ctx.fillStyle = browns[i % 3].replace('A', (alpha * (1 - i * 0.07)).toFixed(2));
+            ctx.beginPath(); ctx.arc(p[0] + push * 26, p[1], p[2] * (0.6 + push * 0.6), 0, 7); ctx.fill();
+        });
+        ctx.restore();
+    }
+
+    // Tierkopf je nach Art (Ohren/Augen/Schnauze) — Kopfmitte bei (0, -42)
+    _drawCritterHead(ctx, kind, BODY, DARK, BELLY, ACC) {
+        const hx = 0, hy = -42, r = 21;
+
+        // Ohren / Antennen HINTER dem Kopf
+        if (kind === 'bunny') {                             // lange Hasenohren
+            for (const sgn of [-1, 1]) {
+                ctx.fillStyle = BODY; ctx.save(); ctx.translate(hx + sgn * 8, hy - 14); ctx.rotate(sgn * 0.18);
+                ctx.beginPath(); ctx.ellipse(0, -30, 8, 32, 0, 0, 7); ctx.fill();
+                ctx.fillStyle = ACC; ctx.beginPath(); ctx.ellipse(0, -30, 4, 24, 0, 0, 7); ctx.fill();
+                ctx.restore();
+            }
+        } else if (kind === 'squirrel') {                   // runde Eichhörnchen-Ohren + Eichel-Mütze
+            ctx.fillStyle = BODY;
+            for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.arc(hx + sgn * 15, hy - 14, 8, 0, 7); ctx.fill(); }
+        } else if (kind === 'bee') {                        // Antennen
+            ctx.strokeStyle = DARK; ctx.lineWidth = 2.6;
+            for (const sgn of [-1, 1]) {
+                ctx.beginPath(); ctx.moveTo(hx + sgn * 7, hy - 16); ctx.quadraticCurveTo(hx + sgn * 16, hy - 32, hx + sgn * 22, hy - 30); ctx.stroke();
+                ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(hx + sgn * 22, hy - 30, 3.5, 0, 7); ctx.fill();
+            }
+        } else if (kind === 'sloth' || kind === 'frog') {   // kleine runde Öhrchen / Frosch: Augen kommen oben drauf
+            if (kind === 'sloth') { ctx.fillStyle = BODY; for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.arc(hx + sgn * 17, hy - 8, 7, 0, 7); ctx.fill(); } }
+        }
+
+        // Kopf-Grundform
+        ctx.fillStyle = BODY;
+        ctx.beginPath(); ctx.arc(hx, hy, r, 0, 7); ctx.fill();
+
+        if (kind === 'squirrel') {                          // Eichel-Mütze
+            ctx.fillStyle = ACC; ctx.beginPath(); ctx.arc(hx, hy - r + 4, 16, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(hx, hy - r + 2, 4, 0, 7); ctx.fill();
+        }
+
+        // Helle Schnauzen-/Wangenpartie
+        ctx.fillStyle = BELLY;
+        ctx.beginPath(); ctx.ellipse(hx, hy + 7, 13, 10, 0, 0, 7); ctx.fill();
+
+        // Augen
+        const eye = (ex, ey, er) => {
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex, ey, er, 0, 7); ctx.fill();
+            ctx.fillStyle = '#2a1a0f'; ctx.beginPath(); ctx.arc(ex + er * 0.25, ey + er * 0.1, er * 0.55, 0, 7); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex + er * 0.5, ey - er * 0.3, er * 0.22, 0, 7); ctx.fill();
+        };
+        if (kind === 'frog') {                              // Frosch: dicke Glubschaugen OBEN auf dem Kopf
+            for (const sgn of [-1, 1]) {
+                ctx.fillStyle = BODY; ctx.beginPath(); ctx.arc(hx + sgn * 11, hy - r + 2, 11, 0, 7); ctx.fill();
+                eye(hx + sgn * 11, hy - r + 1, 7);
+            }
+            ctx.strokeStyle = DARK; ctx.lineWidth = 2.6;    // breites Froschlächeln
+            ctx.beginPath(); ctx.arc(hx, hy + 4, 13, 0.15, Math.PI - 0.15); ctx.stroke();
+        } else if (kind === 'sloth') {                      // Faultier: dunkle Augenflecken, verschlafen
+            ctx.fillStyle = DARK; ctx.globalAlpha = 0.5;
+            for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(hx + sgn * 8, hy - 1, 7, 9, sgn * 0.3, 0, 7); ctx.fill(); }
+            ctx.globalAlpha = 1;
+            for (const sgn of [-1, 1]) eye(hx + sgn * 8, hy, 4);
+            ctx.strokeStyle = DARK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy + 9, 6, 0.2, Math.PI - 0.2); ctx.stroke();   // träges Lächeln
+        } else {
+            for (const sgn of [-1, 1]) eye(hx + sgn * 8, hy - 1, 5.5);
+            // Nase + Mund
+            ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(hx, hy + 6, 3.2, 0, 7); ctx.fill();
+            ctx.strokeStyle = DARK; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(hx, hy + 7, 6, 0.25, Math.PI - 0.25); ctx.stroke();
+            if (kind === 'squirrel' || kind === 'bunny') {  // Hasenzähnchen / Nagezähne
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(hx - 4, hy + 11, 8, 7, 1.5); ctx.fill();
+                ctx.strokeStyle = '#d8d8d8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hx, hy + 11); ctx.lineTo(hx, hy + 18); ctx.stroke();
+            }
+        }
+        // rosa Wangen
+        ctx.fillStyle = 'rgba(255,140,170,0.5)';
+        for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.arc(hx + sgn * 15, hy + 6, 4, 0, 7); ctx.fill(); }
+    }
+
     // LINA die Blumenfee: süßer Kopf mit großen Augen, Lächeln, Blütenkranz
     _drawFairyHead(ctx, cx, cy, SKIN) {
         ctx.save(); ctx.translate(cx, cy);
@@ -691,7 +1060,7 @@ class Player extends Entity {
         // horizontale Stauchung (Pirouette), Körper bleibt aufrecht, kein Überschlag.
         const kicking = this.kickTimer > 0 && this.char.roundhouse;
         if (kicking && !this.isDead) {
-            const prog = 1 - Math.max(0, this.kickTimer) / 0.32;          // 0 -> 1
+            const prog = 1 - Math.max(0, this.kickTimer) / (this.kickDur || 0.32);          // 0 -> 1
             let sx = Math.cos(prog * Math.PI * 2) * (this.facingRight ? 1 : -1);
             sx = sx >= 0 ? Math.max(0.08, sx) : Math.min(-0.08, sx);      // nie ganz flach (degeneriert)
             ctx.scale(sx, 1);
@@ -703,7 +1072,8 @@ class Player extends Entity {
         const vis = this.standH / 140;
         if (!this.isDead) { ctx.translate(0, this.h / 2 - 82.8 * vis + 5); ctx.scale(vis, vis); } // Schuhe exakt auf Bodenlinie (+5px Feinabgleich); vis=1 in Story = neutral
         ctx.save();
-        this.drawMarioBody(ctx, frame);     // prozedurale Spielerfigur (Star-Flash intern, ohne teures filter/shadow)
+        if (this.char.kind) this._drawCritter(ctx, frame);   // Tier-Figuren (Eichhörnchen/Faultier/Hummel/Hase/Frosch)
+        else this.drawMarioBody(ctx, frame);                 // Feen-/Menschfigur (Lina); Star-Flash intern
         ctx.restore();
         
         ctx.scale(1.5, 1.5);
@@ -719,7 +1089,8 @@ class Player extends Entity {
         if (this.isCrouching) walkBob += 20; 
 
         let sX = 0, sY = -21;                         // Schulter etwas tiefer (gibt den Mund frei)
-        if (this.isCrouching) { sX = 1; sY = 1; }     // Hocke: Schulter höher (auf Brusthöhe der Hocke)
+        if (this.char.kind) sY = -8;                  // Tierchen: Körper sitzt tiefer -> Schulter/Arm tiefer ansetzen
+        if (this.isCrouching) { sX = 1; sY = this.char.kind ? 2 : 1; }   // Hocke: Schulter auf Brusthöhe der Hocke
         sY += walkBob;
         
         let attackRot = 0, distHand = 45;
@@ -939,6 +1310,14 @@ class Player extends Entity {
             const by = sy - 16, f = this.jetpackFuel / this.jetpackMax;
             ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx, by, w, 8);
             ctx.fillStyle = f > 0.3 ? '#33d6ff' : '#ff5454'; ctx.fillRect(sx + 1, by + 1, (w - 2) * Math.max(0, f), 6);
+        }
+
+        // --- PUPSI: Pups-Vorrat-Balken (wie Jetpack) — sichtbar im Flug oder solange nicht voll ---
+        if (this.char.fartFly && !this.isDead && (!this.grounded || this.fartFuel < this.fartMax - 0.01)) {
+            const sx = this.x - camX, sy = this.y - camY, w = this.w;
+            const by = sy - 16, f = this.fartFuel / this.fartMax;
+            ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(sx, by, w, 8);
+            ctx.fillStyle = f > 0.3 ? '#b07b3c' : '#ff5454'; ctx.fillRect(sx + 1, by + 1, (w - 2) * Math.max(0, f), 6);   // braun = Pups
         }
 
     }

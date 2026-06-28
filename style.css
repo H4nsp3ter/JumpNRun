@@ -178,9 +178,9 @@ body::after {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Pastell-Wiesen-Hintergrund (CSS, kein JPG mehr): Himmel oben, Wiese unten */
-    background: linear-gradient(180deg, #BFE9FF 0%, #D9ECFF 38%, #FFE9F4 56%, #A6E085 56%, #7FC85A 100%);
-    background-size: cover;
+    /* Eigenes Hintergrundbild (BG.png) mit zartem hellen Schleier für Lesbarkeit */
+    background: linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0.12)), url('BG.png') center / cover no-repeat;
+    background-color: #BFE9FF;   /* Fallback, falls Bild fehlt */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -263,13 +263,13 @@ body::after {
 
 
 #menu-overlay h1 {
-    font-size: clamp(1.7rem, 6vw, 2.8rem);
+    font-size: clamp(2.6rem, 9vw, 4.8rem);
     margin-bottom: 6px;
     color: #FF6FA8;
     text-transform: uppercase;
-    letter-spacing: 4px;
-    line-height: 1.1;
-    text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 3px 3px 0 #fff, 0 0 26px rgba(255, 159, 201, 0.9);
+    letter-spacing: 6px;
+    line-height: 1.05;
+    text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 3px 3px 0 #fff, 0 6px 0 #E3A9CC, 0 0 34px rgba(255, 159, 201, 0.95);
 }
 
 #menu-overlay p {
@@ -304,26 +304,27 @@ body::after {
 .btn-row { display: flex; gap: 8px; justify-content: center; align-items: stretch; width: 100%; }
 .btn-row.wrap, #level-buttons { flex-wrap: wrap; }
 
-/* Auswahl-Buttons (Modus/Sound/Charakter) */
+/* Auswahl-Buttons (Modus/Sound/Charakter/Level) — pastell & herzallerliebst rund */
 .opt-btn {
     flex: 1 1 0;
     min-width: 84px;
-    padding: 11px 8px;
+    padding: 12px 10px;
     font-family: 'Fredoka', 'Segoe UI', sans-serif;
-    font-size: 0.62rem;
+    font-size: 0.78rem;
+    font-weight: 600;
     letter-spacing: 1px;
-    color: #d4f5d4;
-    background: rgba(0, 36, 0, 0.5);
-    border: 2px solid #2faa2f;
-    border-radius: 3px;
-    box-shadow: 3px 3px 0 #000;
+    color: #9B6CD0;
+    background: #FFF0F6;
+    border: 3px solid #FF9FC9;
+    border-radius: 999px;
+    box-shadow: 0 4px 0 #E3A9CC, 0 0 12px rgba(255,159,201,0.4);
     cursor: pointer;
     text-transform: uppercase;
-    text-shadow: 2px 2px 0 #000;
-    transition: transform .08s, background .1s;
+    text-shadow: 1px 1px 0 #fff;
+    transition: transform .08s, background .1s, color .1s;
 }
-.opt-btn:hover { background: rgba(0, 95, 0, 0.7); transform: translateY(-2px); }
-.opt-btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
+.opt-btn:hover { background: #FF9FC9; color: #fff; transform: translateY(-2px); }
+.opt-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #E3A9CC; }
 
 /* Level-Wahl-Buttons (kompakt, umbrechend) */
 #level-buttons { gap: 6px; }
@@ -363,11 +364,12 @@ body::after {
     font-family: 'Fredoka', 'Segoe UI', sans-serif;
     transition: transform 0.1s;
     background: #FFF0F6;
-    border: 2px solid #FF9FC9;
+    border: 3px solid #FF9FC9;
     color: #9B6CD0;
+    font-weight: 600;
     cursor: pointer;
-    border-radius: 10px;
-    box-shadow: 3px 3px 0px #C97FA8;
+    border-radius: 999px;
+    box-shadow: 0 4px 0 #E3A9CC;
     text-transform: uppercase;
     text-shadow: 1px 1px 0 #fff;
 }
@@ -375,8 +377,8 @@ body::after {
 .diff-btn:hover {
     background: #FF9FC9;
     color: #fff;
-    box-shadow: 0 0 15px #FF9FC9;
-    transform: scale(1.05);
+    box-shadow: 0 4px 0 #C97FA8, 0 0 16px #FF9FC9;
+    transform: translateY(-2px) scale(1.04);
 }
 
 .princess { border-color: #ff69b4 !important; color: #E8559E !important; }
@@ -386,29 +388,31 @@ body::after {
 .regular:hover  { background: #9FE8D0 !important; color: #2E6B55 !important; }
 .badass:hover   { background: #C9A0FF !important; color: #fff !important; }
 
-/* Globale Button-Stile für Overlays */
+/* Globale Button-Stile für Overlays — weich, gerundet, herzallerliebst */
 button {
     pointer-events: auto;
     padding: 15px 30px;
     font-size: 1rem;
+    font-weight: 600;
     font-family: 'Fredoka', 'Segoe UI', sans-serif;
     color: #ffffff;
-    background-color: #C9A0FF;
-    border: 4px solid #fff;
+    background: linear-gradient(#C9A0FF, #B07FF0);
+    border: 3px solid #fff;
+    border-radius: 999px;
     cursor: pointer;
     text-transform: uppercase;
-    box-shadow: 4px 4px 0 #C97FA8, 0 0 15px rgba(255, 159, 201, 0.5);
+    box-shadow: 0 6px 0 #9B6CD0, 0 0 16px rgba(255, 159, 201, 0.5);
     text-shadow: 1px 1px 0 #9B6CD0;
-    transition: all 0.1s ease;
+    transition: all 0.12s ease;
 }
 button:hover {
-    background-color: #FF9FC9;
-    box-shadow: 4px 4px 0 #C97FA8, 0 0 25px rgba(255, 159, 201, 0.9);
-    transform: scale(1.03);
+    background: linear-gradient(#FFB3DC, #FF9FC9);
+    box-shadow: 0 6px 0 #C97FA8, 0 0 26px rgba(255, 159, 201, 0.9);
+    transform: translateY(-2px) scale(1.03);
 }
 button:active {
-    transform: translate(4px, 4px);
-    box-shadow: 0 0 0 #000000;
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #9B6CD0;
 }
 
 .hidden {
@@ -440,32 +444,69 @@ button:active {
 .start-hint { display:block; margin-top:7px; font-size:0.5rem; color:#9B6CD0; letter-spacing:1px; text-transform:uppercase; }
 @keyframes startpulse { 0%,100% { box-shadow: 0 0 14px rgba(255,159,201,0.5), 4px 4px 0 #C97FA8; } 50% { box-shadow: 0 0 28px rgba(255,159,201,0.95), 4px 4px 0 #C97FA8; } }
 
+/* ===== PAUSE-Overlay (im Spiel) ===== */
+#pause-overlay {
+    position: absolute; inset: 0; z-index: 60;
+    background: linear-gradient(rgba(155,108,180,0.45), rgba(255,159,201,0.45));
+    backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto;
+}
+.pause-panel {
+    background: rgba(255, 255, 255, 0.92);
+    border: 4px solid #FF9FC9; border-radius: 28px;
+    box-shadow: 0 10px 0 rgba(227,169,204,0.6), 0 0 30px rgba(255,159,201,0.6);
+    padding: clamp(20px, 4vmin, 40px) clamp(26px, 5vmin, 56px);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    min-width: min(380px, 86vw);
+}
+.pause-title {
+    font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-weight: 700;
+    font-size: clamp(1.8rem, 5vw, 2.8rem); letter-spacing: 4px; margin: 0 0 6px;
+    text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9;
+}
+.pause-resume { width: 100%; animation: none !important; }
+.pause-quit {
+    width: 100%;
+    padding: 15px 8px !important;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    font-size: 0.95rem !important; font-weight: 600;
+    color: #fff;
+    background: linear-gradient(#C9A0FF, #B07FF0) !important;
+    border: 3px solid #FFE6FA !important; border-radius: 999px;
+    box-shadow: 0 6px 0 #9B6CD0 !important;
+    text-shadow: 2px 2px 0 #8A5AB0;
+}
+.pause-quit:hover { background: linear-gradient(#D9BBFF, #C9A0FF) !important; transform: translateY(-2px) scale(1.03); }
+.pause-hint { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.7rem; letter-spacing: 1px; margin: 4px 0 0; }
+
 /* ===== CHOOSE YOUR HERO ===== */
 #hero-select {
     position: absolute; inset: 0; z-index: 50;
-    background: rgba(6, 1, 1, 0.92);
+    background: linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url('BG.png') center / cover no-repeat;
+    background-color: #FFE9F4;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 1.2vmin; padding: 2vmin;
 }
 .hero-title {
-    font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 1.6rem;
-    text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9; letter-spacing: 3px; margin: 0 0 1vmin;
+    font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: clamp(1.8rem, 4.5vw, 2.8rem); font-weight: 700;
+    text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9; letter-spacing: 4px; margin: 0 0 1vmin;
 }
-.hero-row { display: flex; gap: 1.4vmax; justify-content: center; align-items: stretch; flex-wrap: nowrap; }
+.hero-row { display: flex; gap: 1.2vmax; justify-content: center; align-items: stretch; flex-wrap: wrap; }
 .hero-card {
-    width: min(20vmax, 230px);
-    background: rgba(255, 255, 255, 0.78);
-    border: 3px solid #FF9FC9; border-radius: 14px;
-    padding: 1.2vmin 1vmin; cursor: pointer;
+    width: min(22vmax, 248px);
+    background: rgba(255, 255, 255, 0.86);
+    border: 4px solid #FF9FC9; border-radius: 24px;
+    padding: 1.4vmin 1.2vmin; cursor: pointer;
     display: flex; flex-direction: column; align-items: center;
-    box-shadow: inset 0 0 24px rgba(255,214,236,0.5); transition: transform 0.12s, box-shadow 0.12s;
+    box-shadow: 0 7px 0 rgba(227,169,204,0.55), inset 0 0 26px rgba(255,214,236,0.5); transition: transform 0.12s, box-shadow 0.12s;
 }
-.hero-card:hover { transform: translateY(-6px) scale(1.04); border-color: #E86FB0; box-shadow: 0 0 22px rgba(255,111,168,0.7); }
+.hero-card:hover { transform: translateY(-6px) scale(1.04); border-color: #E86FB0; box-shadow: 0 7px 0 rgba(227,169,204,0.55), 0 0 24px rgba(255,111,168,0.7); }
 .hero-canvas { position: static !important; flex: 0 0 auto; width: 130px !important; height: 180px !important; image-rendering: pixelated; z-index: auto; }
-.hero-card h3 { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 0.95rem; margin: 6px 0; text-shadow: 2px 2px 0 #fff; }
-.hero-desc { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.5rem; line-height: 1.6; text-align: center; margin: 0; }
+.hero-card h3 { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: clamp(1.15rem, 2.4vmax, 1.5rem); font-weight: 700; margin: 8px 0 6px; text-shadow: 2px 2px 0 #fff; }
+.hero-desc { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #6E5096; font-size: clamp(0.74rem, 1.6vmax, 0.95rem); font-weight: 500; line-height: 1.45; text-align: center; margin: 0; }
 .hero-desc b { color: #E86FB0; }
-.hero-controls { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.55rem; text-align: center; margin-top: 1.4vmin; letter-spacing: 1px; }
+.hero-controls { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #6E5096; font-size: clamp(0.7rem, 1.3vmax, 0.85rem); font-weight: 500; text-align: center; margin-top: 1.4vmin; letter-spacing: 1px; }
 .hero-controls b { color: #E86FB0; }
 .hero-pick { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #E86FB0; font-size: 0.6rem; animation: blink 1s step-start infinite; margin: 0.4vmin 0; }
 #hero-back { flex: 0 0 auto !important; width: auto !important; align-self: center; padding: 12px 26px !important; font-size: 0.7rem !important; min-width: 0 !important; }
@@ -477,19 +518,21 @@ button:active {
 .start-main .start-btn { width: auto; padding: 18px 54px !important; font-size: 1.4rem !important; }
 
 /* ===== Menü-Assistent (Wizard-Schritte) ===== */
-.wizard { position: absolute; inset: 0; z-index: 50; background: linear-gradient(180deg, #BFE9FF 0%, #FFE9F4 55%, #A6E085 55%, #7FC85A 100%);
+.wizard { position: absolute; inset: 0; z-index: 50;
+    background: linear-gradient(rgba(255,255,255,0.45), rgba(255,255,255,0.45)), url('BG.png') center / cover no-repeat;
+    background-color: #FFE9F4;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4vmin; padding: 2vmin; }
-.wiz-title { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 1.5rem; text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9; letter-spacing: 3px; margin: 0 0 1vmin; }
+.wiz-title { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: clamp(1.7rem, 4.5vw, 2.6rem); font-weight: 700; text-shadow: 3px 3px 0 #fff, 0 0 18px #FF9FC9; letter-spacing: 4px; margin: 0 0 1.4vmin; }
 .wiz-row { display: flex; gap: 2vmax; justify-content: center; align-items: stretch; flex-wrap: wrap; }
-.wiz-card { width: min(28vmax, 320px); background: rgba(255, 255, 255, 0.82); border: 3px solid #FF9FC9; border-radius: 16px;
-    padding: 1.4vmin 1.2vmin; cursor: pointer; display: flex; flex-direction: column; align-items: center;
-    box-shadow: inset 0 0 24px rgba(255,214,236,0.5); transition: transform 0.12s, box-shadow 0.12s; }
-.wiz-card:hover { transform: translateY(-6px) scale(1.04); border-color: #E86FB0; box-shadow: 0 0 24px rgba(255,111,168,0.7); }
-.wiz-card h3 { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 1.1rem; margin: 12px 0 6px; text-shadow: 2px 2px 0 #fff; }
-.wiz-desc { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #7A5AA0; font-size: 0.55rem; line-height: 1.7; text-align: center; margin: 0; }
+.wiz-card { width: min(38vmax, 440px); background: rgba(255, 255, 255, 0.86); border: 4px solid #FF9FC9; border-radius: 26px;
+    padding: 2vmin 1.8vmin; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 8px 0 rgba(227,169,204,0.6), inset 0 0 30px rgba(255,214,236,0.5); transition: transform 0.12s, box-shadow 0.12s; }
+.wiz-card:hover { transform: translateY(-6px) scale(1.04); border-color: #E86FB0; box-shadow: 0 8px 0 rgba(227,169,204,0.6), 0 0 28px rgba(255,111,168,0.7); }
+.wiz-card h3 { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: clamp(1.3rem, 3vmax, 1.9rem); font-weight: 700; margin: 14px 0 8px; text-shadow: 2px 2px 0 #fff; }
+.wiz-desc { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #6E5096; font-size: clamp(0.75rem, 1.7vmax, 0.98rem); font-weight: 500; line-height: 1.5; text-align: center; margin: 0; }
 .wiz-desc b { color: #E86FB0; }
-.mode-preview { position: static !important; width: 260px !important; height: 150px !important; flex: 0 0 auto; border: 2px solid #FF9FC9; border-radius: 8px; image-rendering: pixelated; z-index: auto; }
-.wiz-icon { font-size: 2.6rem; }
+.mode-preview { position: static !important; width: 360px !important; height: 210px !important; max-width: 100%; flex: 0 0 auto; border: 3px solid #FF9FC9; border-radius: 16px; image-rendering: pixelated; z-index: auto; }
+.wiz-icon { font-size: 3.6rem; }
 .wiz-hint { font-family: 'Fredoka', 'Segoe UI', sans-serif; color: #9B6CD0; font-size: 0.55rem; text-align: center; margin: 0.4vmin 0 1vmin; }
 .wiz-back { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; align-self: center; margin-top: 1vmin; padding: 12px 26px !important; font-size: 0.7rem !important; }
 /* Level-/Schwierigkeit-Schritt: aufgeräumtes Panel */
@@ -571,14 +614,14 @@ body.in-game.touch #mobile-controls { display: block; }
     position: absolute;
     bottom: 20px;
     right: 20px;
-    width: 150px;
-    height: 150px;
+    width: 210px;          /* groß genug, damit der Diamant aus 4 Buttons sich NICHT überlappt (auch auf Tablets >950px) */
+    height: 210px;
     opacity: 0.8;
 }
 .action-btn {
     position: absolute;
-    width: 110px;
-    height: 110px;
+    width: 84px;           /* < Pad/2 -> kein Überlappen der gegenüberliegenden Buttons */
+    height: 84px;
     border-radius: 50% !important;
     border: 5px solid #111 !important;
     font-family: 'Fredoka', 'Segoe UI', sans-serif;
@@ -704,5 +747,38 @@ body.in-game #zoom-controls { display: flex; }
     #action-pad { width: 170px !important; height: 170px !important; bottom: 14px !important; right: 14px !important; opacity: 0.8; }
     .action-btn { width: 66px !important; height: 66px !important; font-size: 2rem !important; }
     .dpad-btn { border-width: 6px !important; }
+
+    /* ---- MENÜS auf kleinen Screens kompakter, damit ALLES sichtbar bleibt ---- */
+    #menu-overlay h1 { font-size: clamp(1.6rem, 7.5vw, 2.6rem); letter-spacing: 3px; }
+    .start-main { bottom: 5%; gap: 12px; }
+    .start-main .start-btn { padding: 12px 34px !important; font-size: 1.1rem !important; }
+
+    .wizard, #hero-select { gap: 0.8vmin; padding: 1vmin; overflow-y: auto; touch-action: pan-y; justify-content: flex-start; padding-top: 2vmin; }
+    .wiz-title, .hero-title { font-size: clamp(1.2rem, 5.5vw, 1.8rem) !important; letter-spacing: 2px; margin: 0 0 0.6vmin !important; }
+
+    /* Modus-/Musik-Karten */
+    .wiz-row { gap: 1.2vmax; }
+    .wiz-card { width: min(44vmax, 300px); padding: 1vmin; border-radius: 18px; box-shadow: 0 5px 0 rgba(227,169,204,0.6); }
+    .wiz-card h3 { font-size: clamp(1rem, 3.6vmax, 1.4rem); margin: 6px 0 4px; }
+    .wiz-desc { font-size: clamp(0.64rem, 2.2vmax, 0.82rem); line-height: 1.35; }
+    .mode-preview { width: 240px !important; height: 140px !important; }
+    .wiz-icon { font-size: 2.4rem; }
+
+    /* Helden-Karten */
+    .hero-row { gap: 0.8vmax; }
+    .hero-card { width: min(30vmax, 152px); padding: 0.8vmin 0.6vmin; border-radius: 16px; box-shadow: 0 5px 0 rgba(227,169,204,0.55); }
+    .hero-canvas { width: 84px !important; height: 116px !important; }
+    .hero-card h3 { font-size: clamp(0.82rem, 3vmax, 1.05rem); margin: 4px 0 3px; }
+    .hero-desc { font-size: clamp(0.6rem, 2vmax, 0.8rem); line-height: 1.3; }
+    .hero-controls { font-size: clamp(0.56rem, 1.8vmax, 0.72rem); margin-top: 0.8vmin; }
+
+    /* Level-/Schwierigkeits-Schritt */
+    .wiz-panel { padding: 1.6vmin 2vmin; gap: 1.2vmin; min-width: min(440px, 92vw); }
+    #step-level #btn-go { padding: 12px 36px !important; font-size: 1rem !important; }
+    .wiz-back { padding: 10px 22px !important; font-size: 0.66rem !important; }
+
+    /* Pause-Menü */
+    .pause-panel { padding: 18px 24px; gap: 12px; }
+    .pause-title { font-size: clamp(1.5rem, 6vw, 2.2rem); }
 }
 

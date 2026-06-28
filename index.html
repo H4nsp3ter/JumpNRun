@@ -58,6 +58,16 @@
             </div>
         </div>
         
+        <!-- PAUSE-Overlay (im Spiel) -->
+        <div id="pause-overlay" class="hidden">
+            <div class="pause-panel">
+                <h2 class="pause-title">&#10074;&#10074; PAUSE</h2>
+                <button id="btn-resume" class="start-btn pause-resume">&#9654; WEITER SPIELEN</button>
+                <button id="btn-quit" class="pause-quit">&#127968; SPIEL BEENDEN</button>
+                <p class="pause-hint">ESC = weiter spielen</p>
+            </div>
+        </div>
+
         <!-- STARTSCREEN: nur Titel + START -->
         <div id="menu-overlay">
             <div class="menu-panel">
@@ -87,14 +97,14 @@
             <h2 class="wiz-title">W&Auml;HLE DEINEN MODUS</h2>
             <div class="wiz-row">
                 <div class="wiz-card mode-card" data-mode="NORMAL">
-                    <canvas class="mode-preview" width="260" height="150"></canvas>
-                    <h3>MODE A</h3>
-                    <p class="wiz-desc">Prozedural aufgebautes Level (Bauplan aus Modulen) &ndash; siehe buildModule() in level.js.</p>
+                    <canvas class="mode-preview" width="360" height="210"></canvas>
+                    <h3>MODE A &#127804;</h3>
+                    <p class="wiz-desc">Immer neue Abenteuer! Vier zauberhafte Welten bauen sich von selbst zusammen &ndash; mit rollenden H&uuml;geln, W&ouml;lkchen und einem Einhorn-Boss.</p>
                 </div>
                 <div class="wiz-card mode-card" data-mode="CLASSIC">
-                    <canvas class="mode-preview" width="260" height="150"></canvas>
-                    <h3>MODE B</h3>
-                    <p class="wiz-desc">Handgesetztes Level an festen Koordinaten &ndash; siehe buildClassic() in classic.js.</p>
+                    <canvas class="mode-preview" width="360" height="210"></canvas>
+                    <h3>MODE B &#127844;</h3>
+                    <p class="wiz-desc">F&uuml;nf liebevoll von Hand gebaute Level: Bonbon-Garten, Unterwasser-Riff, Wolkenflug, Pl&uuml;sch-T&uuml;rme &amp; Einhorn-Schloss.</p>
                 </div>
             </div>
             <button class="wiz-back" data-back="start">&#8592; ZUR&Uuml;CK</button>
@@ -104,8 +114,8 @@
         <div id="step-music" class="wizard hidden">
             <h2 class="wiz-title">W&Auml;HLE DIE MUSIK</h2>
             <div class="wiz-row">
-                <div class="wiz-card music-card" data-audio="METAL"><div class="wiz-icon">&#127911;</div><h3>METAL</h3><p class="wiz-desc">Brachiale Heavy-Metal-Tracks. Brutal und laut.</p></div>
-                <div class="wiz-card music-card" data-audio="CLASSIC"><div class="wiz-icon">&#9834;</div><h3>8-BIT</h3><p class="wiz-desc">Klassische Chiptune-Melodien. Waffen-Sounds bleiben gleich.</p></div>
+                <div class="wiz-card music-card" data-audio="SONGS"><div class="wiz-icon">&#127925;</div><h3>LIEDER</h3><p class="wiz-desc">Fr&ouml;hliche Songs &ndash; pro Level zuf&auml;llig, l&auml;uft als Loop.</p></div>
+                <div class="wiz-card music-card" data-audio="CLASSIC"><div class="wiz-icon">&#9834;</div><h3>CHIPTUNE</h3><p class="wiz-desc">Fr&ouml;hliche 8-Bit-Melodien je Welt.</p></div>
             </div>
             <button class="wiz-back" data-back="mode">&#8592; ZUR&Uuml;CK</button>
         </div>
@@ -119,8 +129,28 @@
                     <h3>LINA</h3>
                     <p class="hero-desc">Die Blumenfee &ndash; <b>Flatter-Doppelsprung</b> &amp; <b>Knutsch-Knuddel-Attacke</b> (E), die Gegner zu Bl&uuml;mchen knuddelt.</p>
                 </div>
+                <div class="hero-card" data-char="PUPSI">
+                    <canvas class="hero-canvas" width="130" height="180"></canvas>
+                    <h3>PUPSI &#128063;</h3>
+                    <p class="hero-desc">Das Pupsh&ouml;rnchen &ndash; fliegt mit <b>Pups-Antrieb</b> (Springen halten) &amp; pustet Gegner mit einem gezielten <b>Pups</b> (E) weg!</p>
+                </div>
+                <div class="hero-card" data-char="BRUMMEL">
+                    <canvas class="hero-canvas" width="130" height="180"></canvas>
+                    <h3>BRUMMEL &#128029;</h3>
+                    <p class="hero-desc">Die Hummel &ndash; <b>schwebt dauerhaft</b> in der Luft (Springen halten) &amp; wirft klebrige <b>Honig-Kleckse</b> (E).</p>
+                </div>
+                <div class="hero-card" data-char="HOPPEL">
+                    <canvas class="hero-canvas" width="130" height="180"></canvas>
+                    <h3>HOPPEL &#128048;</h3>
+                    <p class="hero-desc">Der Hase &ndash; <b>Dreifach-H&uuml;pfer</b> &amp; schleudert M&ouml;hrchen, die Gegner umpusten (E).</p>
+                </div>
+                <div class="hero-card" data-char="QUAKI">
+                    <canvas class="hero-canvas" width="130" height="180"></canvas>
+                    <h3>QUAKI &#128056;</h3>
+                    <p class="hero-desc">Der Frosch &ndash; <b>Mega-Sprung</b> &amp; <b>Klebezunge</b> (E), die Gegner UND Bonbons heranzieht.</p>
+                </div>
             </div>
-            <p class="hero-controls">STEUERUNG&nbsp; &#8592;&#8594; Laufen &middot; LEER/B Springen (2&times; = Flattern) &middot; F/A Spritzen &middot; Q/X Waffe &middot; <b>E Knutsch-Knuddel (Lina)</b></p>
+            <p class="hero-controls">STEUERUNG&nbsp; &#8592;&#8594; Laufen &middot; LEER/B Springen (gedr&uuml;ckt halten = Fliegen/Schweben) &middot; F/A Spritzen &middot; Q/X Waffe &middot; <b>E Spezial-Attacke</b></p>
             <p class="hero-pick">&#9654; W&Auml;HLE DEINE HELDIN</p>
             <button class="wiz-back" data-back="music">&#8592; ZUR&Uuml;CK</button>
         </div>

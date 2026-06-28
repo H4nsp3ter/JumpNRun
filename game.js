@@ -32,7 +32,7 @@ class Game {
         this.difficulty = 'regular';
         this.gameMode = localStorage.getItem('badMarioMode') || 'NORMAL'; // 'NORMAL' = Story, 'CLASSIC' = Super-Mario-Level
         this.classicMode = (this.gameMode === 'CLASSIC');
-        this.audioMode = localStorage.getItem('badMarioAudio') || 'METAL';  // 'METAL' = bisher, 'CLASSIC' = 8-Bit-Mario-Sound
+        this.audioMode = localStorage.getItem('badMarioAudio') || 'SONGS';  // 'SONGS' = Happy-Song-Loops, 'CLASSIC' = Chiptune
         this.character = localStorage.getItem('badMarioChar') || 'LINA';   // LINA (Blumenfee) / MARIO / LUIGI / SONIC / CHUCK
         this.selectedDiff = 'regular';   // im Menü gewählte Schwierigkeit (Start über Hero-Select)
         this.maxUnlockedLevel = parseInt(localStorage.getItem('badMarioUnlockedLevel')) || 1;
@@ -123,27 +123,57 @@ class Game {
 
     // Vorschau-Szenen für die Modus-Auswahl
     renderModePreviews() {
+        // süßes Blümchen helper
+        const flower = (ctx, x, y, c) => {
+            ctx.fillStyle = c; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 5, y + Math.sin(a) * 5, 4, 0, 7); ctx.fill(); }
+            ctx.fillStyle = '#FFD86B'; ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill();
+        };
+        const cloud = (ctx, x, y, s) => {
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath(); ctx.arc(x, y, 12 * s, 0, 7); ctx.arc(x + 14 * s, y + 2, 9 * s, 0, 7); ctx.arc(x - 14 * s, y + 2, 9 * s, 0, 7); ctx.fill();
+        };
         document.querySelectorAll('#step-mode .mode-card').forEach(card => {
             const cv = card.querySelector('.mode-preview'); if (!cv) return;
             const ctx = cv.getContext('2d'); const W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H);
+            const groundY = H - 38;
             if (card.dataset.mode === 'CLASSIC') {
-                ctx.fillStyle = '#5C94FC'; ctx.fillRect(0, 0, W, H);
-                ctx.fillStyle = '#00A800'; ctx.beginPath(); ctx.arc(W * 0.32, H - 24, 40, Math.PI, 0); ctx.fill();
-                ctx.fillStyle = '#C84C0C'; ctx.fillRect(0, H - 24, W, 24);
-                ctx.fillStyle = '#7C2C00'; for (let x = 0; x < W; x += 18) ctx.fillRect(x, H - 24, 2, 24);
-                ctx.fillStyle = '#00A800'; ctx.fillRect(W - 60, H - 70, 28, 46); ctx.fillStyle = '#58D854'; ctx.fillRect(W - 58, H - 68, 7, 44);
-            } else {
-                const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#3a0808'); g.addColorStop(1, '#0a0204');
+                // MODE B — handgebauter Bonbon-Garten: Himmel, Wiese, Herz-Blöcke, Blümchen
+                const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#FFD6EC'); g.addColorStop(1, '#D9FBF0');
                 ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-                ctx.fillStyle = '#5a4a36'; ctx.fillRect(0, H - 24, W, 24);
-                ctx.fillStyle = '#241a10'; for (let x = 0; x < W; x += 16) ctx.fillRect(x, H - 24, 2, 24);
-                ctx.fillStyle = 'rgba(70,95,35,0.6)'; for (let x = 0; x < W; x += 22) ctx.fillRect(x, H - 24, 10, 4);
-                ctx.fillStyle = '#5a7d3a'; ctx.beginPath(); ctx.ellipse(W - 52, H - 40, 13, 18, 0, 0, 7); ctx.fill();  // Zombie
-                ctx.fillStyle = '#b00000'; ctx.beginPath(); ctx.arc(W - 56, H - 46, 2.2, 0, 7); ctx.arc(W - 48, H - 46, 2.2, 0, 7); ctx.fill();
+                cloud(ctx, 70, 40, 1.1); cloud(ctx, 270, 30, 0.9);
+                // Wiese
+                ctx.fillStyle = '#8FD06A'; ctx.fillRect(0, groundY, W, H - groundY);
+                ctx.fillStyle = '#A6E085'; ctx.fillRect(0, groundY, W, 7);
+                // schwebende Herz-Blöcke (handgesetzt)
+                const heart = (hx, hy) => {
+                    ctx.fillStyle = '#FFB3DC'; ctx.strokeStyle = '#E86FB0'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.roundRect(hx - 17, hy - 17, 34, 34, 8); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#E86FB0';
+                    ctx.beginPath(); ctx.moveTo(hx, hy + 7); ctx.bezierCurveTo(hx - 12, hy - 5, hx - 6, hy - 13, hx, hy - 6);
+                    ctx.bezierCurveTo(hx + 6, hy - 13, hx + 12, hy - 5, hx, hy + 7); ctx.fill();
+                };
+                heart(150, 78); heart(192, 78); heart(234, 78);
+                // Bonbon-Röhre
+                ctx.fillStyle = '#9FE8D0'; ctx.strokeStyle = '#5FC0A0'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.roundRect(W - 64, groundY - 56, 44, 56, 10); ctx.fill(); ctx.stroke();
+                flower(ctx, 30, groundY + 16, '#FF9FC9'); flower(ctx, 300, groundY + 18, '#C9A0FF');
+            } else {
+                // MODE A — prozedurale Blümchen-Wiese: Himmel, Sonne, rollende Hügel, Blümchen
+                const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#BFE9FF'); g.addColorStop(1, '#FFF0F6');
+                ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#FFE56B'; ctx.beginPath(); ctx.arc(W - 50, 44, 26, 0, 7); ctx.fill();   // Sonne
+                cloud(ctx, 90, 36, 1.0); cloud(ctx, 200, 54, 0.8);
+                // rollende Hügel (hinten heller, vorne kräftiger)
+                ctx.fillStyle = '#BFE3A8'; ctx.beginPath(); ctx.moveTo(0, groundY);
+                for (let x = 0; x <= W; x += 20) ctx.lineTo(x, groundY - 26 - Math.sin(x / 46) * 20);
+                ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+                ctx.fillStyle = '#8FD06A'; ctx.fillRect(0, groundY, W, H - groundY);
+                ctx.fillStyle = '#A6E085'; ctx.fillRect(0, groundY, W, 7);
+                flower(ctx, 60, groundY + 16, '#FF9FC9'); flower(ctx, 140, groundY + 20, '#C9A0FF'); flower(ctx, 250, groundY + 16, '#FFD86B');
             }
             try {
                 const pl = new Player(0, 0, this.character); pl.facingRight = true; pl.grounded = true; pl.state = 'IDLE';
-                ctx.save(); ctx.translate(W * 0.30, H - 24); ctx.scale(0.34, 0.34); pl.draw(ctx, 40, 145); ctx.restore();
+                ctx.save(); ctx.translate(W * 0.22, groundY + 2); ctx.scale(0.42, 0.42); pl.draw(ctx, 40, 145); ctx.restore();
             } catch (e) {}
         });
     }
@@ -169,14 +199,13 @@ class Game {
         localStorage.setItem('badMarioAudio', mode);
         if (this.audio) this.audio.audioTheme = mode;
 
-        const setBtn = (btn, active) => {
-            if (!btn) return;
-            btn.style.opacity = active ? '1' : '0.45';
-            btn.style.boxShadow = active ? '0 0 15px #0FF' : 'none';
-            btn.style.borderColor = active ? '#0FF' : '';
-        };
-        setBtn(document.getElementById('btn-audio-metal'), mode === 'METAL');
-        setBtn(document.getElementById('btn-audio-classic'), mode === 'CLASSIC');
+        // aktive Musik-Karte hervorheben
+        document.querySelectorAll('#step-music .music-card').forEach(c => {
+            const active = c.dataset.audio === mode;
+            c.style.borderColor = active ? '#E86FB0' : '';
+            c.style.boxShadow = active ? '0 0 18px rgba(255,111,168,0.7)' : '';
+            c.style.opacity = active ? '1' : '0.7';
+        });
 
         // Läuft schon Musik? Dann live umschalten.
         if (this.state === 'PLAYING' && this.audio && this.audio.startBGM) {
@@ -243,6 +272,9 @@ class Game {
 
         document.body.addEventListener('click', (e) => {
             const t = e.target;
+            // ---- PAUSE-Menü ----
+            if (t.id === 'btn-resume' || (t.closest && t.closest('#btn-resume'))) { if (this.state === 'PAUSED') this.state = 'PLAYING'; return; }
+            if (t.id === 'btn-quit' || (t.closest && t.closest('#btn-quit'))) { this.exitToMenu(); return; }
             // ---- STUFENWEISER MENÜ-ASSISTENT: START -> Modus -> Musik -> Held -> Level ----
             if (t.id === 'btn-start') { this.audio.init(); this.showStep('mode'); return; }
             // Schwierigkeit im Level-Schritt = Auswahl (Start über LOS GEHT'S)
@@ -276,7 +308,8 @@ class Game {
                 const btnZoomIn = document.getElementById('btn-zoom-in');
         const btnZoomOut = document.getElementById('btn-zoom-out');
         const btnPause = document.getElementById('btn-pause');
-        
+        this._pauseOverlay = document.getElementById('pause-overlay');
+
         if (btnZoomIn) { 
             btnZoomIn.addEventListener('touchstart', (e) => { e.preventDefault(); this.zoom = Math.min(3.0, this.zoom + 0.1); }, {passive: false}); 
             btnZoomIn.addEventListener('mousedown', (e) => { e.preventDefault(); this.zoom = Math.min(3.0, this.zoom + 0.1); }); 
@@ -572,6 +605,29 @@ class Game {
         if (this.player) this.player.deathTimer = 999;   // damit "weiter"-Logik nicht eingreift
     }
 
+    // Aus dem Pause-Menü zurück ins Hauptmenü (Startscreen)
+    exitToMenu() {
+        this.state = 'MENU';
+        if (this.audio && this.audio.stopBGM) this.audio.stopBGM();
+        this.player = null;
+        this.projectiles = [];
+        if (this.particles) this.particles.particles = [];
+        this.screenBlood = [];
+        if (this.levelGen) {
+            this.levelGen.platforms = []; this.levelGen.enemies = []; this.levelGen.items = [];
+            this.levelGen.ladders = []; this.levelGen.corpses = []; this.levelGen.goalX = null;
+            this.levelGen.currentGeneratedLevel = -1;   // erzwingt sauberen Neuaufbau beim nächsten Start
+        }
+        // Menü-Overlays: Startscreen zeigen, Wizard/Stats verstecken
+        if (this.ui.menuOverlay) this.ui.menuOverlay.classList.remove('hidden');
+        if (this.ui.gameOverStats) this.ui.gameOverStats.classList.add('hidden');
+        const sp = document.getElementById('start-screen-prompt'); if (sp) sp.classList.remove('hidden');
+        ['step-mode', 'step-music', 'hero-select', 'step-level'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+        if (this.ui.mobileControls) this.ui.mobileControls.classList.add('hidden');
+        if (this._pauseOverlay) this._pauseOverlay.classList.add('hidden');
+        document.body.classList.remove('in-game');
+    }
+
     triggerGameOver() {
         this.state = 'GAMEOVER';
         this.audio.stopBGM();
@@ -657,6 +713,7 @@ class Game {
         
         window.gameInstance = this;
         document.body.classList.toggle('in-game', this.state === 'PLAYING' || this.state === 'PAUSED'); // Controls/Zoom nur im Spiel
+        if (this._pauseOverlay) this._pauseOverlay.classList.toggle('hidden', this.state !== 'PAUSED'); // Pause-Menü ein/aus
 
         if (this.state === 'PLAYING') {
             this.update(dt);
@@ -1295,19 +1352,7 @@ class Game {
             this.ctx.textAlign = 'left'; this.ctx.textBaseline = 'alphabetic';
         }
         
-        if (this.state === 'PAUSED') {
-            const W = this.logicalWidth, H = this.logicalHeight;
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.ctx.fillRect(0, 0, W, H);
-            this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
-            this.ctx.fillStyle = '#FFF';
-            this.ctx.font = `${Math.max(20, Math.min(40, Math.floor(W / 26)))}px 'Fredoka', sans-serif`;
-            this.ctx.fillText('PAUSED', W / 2, H / 2 - 10);
-            this.ctx.fillStyle = '#d82820';
-            this.ctx.font = `${Math.max(10, Math.min(16, Math.floor(W / 70)))}px 'Fredoka', sans-serif`;
-            this.ctx.fillText('ESC = RESUME', W / 2, H / 2 + 40);
-            this.ctx.textAlign = 'left'; this.ctx.textBaseline = 'alphabetic';
-        }
+        // PAUSE wird als DOM-Overlay (#pause-overlay) gezeigt — siehe loop()/index.html
 
         if (this.state === 'LEVELCLEAR') this.drawLevelClear();
         else if (this.state === 'VICTORY') this.drawVictory();
