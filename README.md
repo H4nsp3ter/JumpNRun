@@ -1,7 +1,7 @@
 # 🌸 Blümchen-Land
 
 Ein **knuddeliges 2D-Jump'n'Run für Kinder** – das liebe Gegenteil eines Gore-Shooters.
-Du spielst **Lina die Blumenfee** und überwältigst süße Tierchen mit **so viel Liebe**, dass
+Du spielst **Lina die Blumenfee** oder eines der anderen süßen Charaktere und überwältigst süße Tierchen mit **so viel Liebe**, dass
 sie vor Glück zu **Blümchen zerplatzen**. 🦄💕
 
 Komplett in **Vanilla JavaScript** mit HTML5 Canvas 2D + Web Audio — kein Build-Step, kein
